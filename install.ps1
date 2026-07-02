@@ -1,5 +1,5 @@
 # PowerShell installer for GhostProto
-$repoUrl = "https://github.com/AtlasRoX/Ghost-Proto.git"
+$packageUrl = "https://github.com/AtlasRoX/Ghost-Proto/archive/refs/heads/main.tar.gz"
 
 Write-Host "==============================" -ForegroundColor Cyan
 Write-Host "   GhostProto CLI Installer   " -ForegroundColor Cyan
@@ -18,7 +18,7 @@ if (!(Get-Command git -ErrorAction SilentlyContinue)) {
 }
 
 Write-Host "[+] Installing GhostProto globally via npm..." -ForegroundColor Yellow
-npm install -g $repoUrl
+npm install -g $packageUrl
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "[+] GhostProto installed successfully!" -ForegroundColor Green
