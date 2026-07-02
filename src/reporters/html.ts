@@ -1,11 +1,11 @@
 // ─────────────────────────────────────────────
-//  ghostproto — HTML Reporter
+//  ghostproto — HTML Reporter  (v3 — monochrome + logo)
 // ─────────────────────────────────────────────
 
 import fs from 'fs';
+import path from 'path';
 import type { AuditReport } from '../core/types';
 
-// Escapes characters for embedding safely inside standard HTML attributes or tags during static header generation
 function esc(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -15,9 +15,31 @@ function esc(s: string): string {
     .replace(/'/g, '&#039;');
 }
 
+/** Resolve logo as an inline base64 data-URI, fallback to empty string */
+function loadLogoDataUri(): string {
+  try {
+    // Walk up from dist/ to project root, look for assets/logo.png
+    const candidates = [
+      path.resolve(__dirname, '../../assets/logo.png'),
+      path.resolve(__dirname, '../assets/logo.png'),
+      path.resolve(process.cwd(), 'assets/logo.png'),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        const b64 = fs.readFileSync(p).toString('base64');
+        return `data:image/png;base64,${b64}`;
+      }
+    }
+  } catch { /* ignored */ }
+  return '';
+}
+
 export function generateHtmlReport(report: AuditReport, outputPath: string): void {
-  // Safe serialization of the report for embedding inside <script>
   const serializedReport = JSON.stringify(report).replace(/</g, '\\u003c');
+  const logoDataUri = loadLogoDataUri();
+  const logoHtml = logoDataUri
+    ? `<img src="${logoDataUri}" alt="GhostProto" class="logo-img">`
+    : `<span class="logo-text">Ghost<span>Proto</span></span>`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -27,173 +49,222 @@ export function generateHtmlReport(report: AuditReport, outputPath: string): voi
 <title>GhostProto — ${esc(report.project.name)} Audit</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #090b11;
-    --surface: #101420;
-    --surface-hover: #151b2b;
-    --surface-card: #121827;
-    --border: #1e2638;
-    --border-hover: #2e3b54;
-    
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
-    
-    --teal: #2dbfad;
-    --teal-glow: rgba(45, 191, 173, 0.15);
-    --teal-dark: #1b7368;
-    
-    --critical: #ef4444;
-    --high: #f97316;
-    --medium: #eab308;
-    --low: #3b82f6;
-    --info: #64748b;
-    --success: #10b981;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ── Reset & base ─────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   
-  body {
-    background-color: var(--bg);
-    color: var(--text-primary);
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    padding-bottom: 4rem;
+  :root {
+    /* Monochrome palette */
+    --bg:            #0a0a0a;
+    --surface:       #111111;
+    --surface-2:     #171717;
+    --border:        #222222;
+    --border-2:      #2e2e2e;
+
+    --text-1:        #f5f5f5;
+    --text-2:        #a3a3a3;
+    --text-3:        #6b6b6b;
+    --text-inv:      #0a0a0a;
+
+    /* Severity indicators — the ONLY colours */
+    --sev-critical:  #ef4444;
+    --sev-high:      #f97316;
+    --sev-medium:    #eab308;
+    --sev-low:       #3b82f6;
+    --sev-info:      #6b6b6b;
+    --sev-success:   #22c55e;
+
+    /* Accent used only for active states */
+    --accent:        #f5f5f5;
+    --accent-inv:    #0a0a0a;
+
+    --radius-sm:     6px;
+    --radius-md:     10px;
+    --radius-lg:     14px;
+    --radius-xl:     18px;
   }
 
-  a { color: var(--teal); text-decoration: none; transition: color 0.2s; }
-  a:hover { color: var(--text-primary); }
+  html { scroll-behavior: smooth; }
 
-  code, pre {
+  body {
+    background: var(--bg);
+    color: var(--text-1);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    /* Prevent horizontal scroll at all costs */
+    overflow-x: hidden;
+  }
+
+  code, pre, .mono {
     font-family: 'Fira Code', 'JetBrains Mono', monospace;
   }
 
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-  }
+  a { color: var(--text-2); text-decoration: none; }
+  a:hover { color: var(--text-1); }
 
-  /* Header */
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 2rem;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 2rem;
-  }
-  .logo {
-    font-size: 1.5rem;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .logo span {
-    color: var(--teal);
-  }
-  .subtitle {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    text-align: right;
-  }
-  .subtitle strong {
-    color: var(--text-secondary);
-  }
-
-  /* Bento Grid */
-  .bento-grid {
+  /* ── Layout shell ─────────────────────────────────── */
+  .page {
     display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    gap: 1.25rem;
-    margin-bottom: 2rem;
+    grid-template-rows: auto 1fr auto;
+    min-height: 100vh;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 
-  .bento-card {
-    background-color: var(--surface-card);
+  .wrap {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── Top nav / header ────────────────────────────── */
+  .topbar {
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    gap: 16px;
+    padding: 0 24px;
+    max-width: 1280px;
+    margin: 0 auto;
+    min-width: 0;
+  }
+  .logo-img {
+    height: 28px;
+    width: auto;
+    display: block;
+    object-fit: contain;
+  }
+  .logo-text {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text-1);
+  }
+  .logo-text span { color: var(--text-3); }
+  .topbar-meta {
+    font-size: 12px;
+    color: var(--text-3);
+    text-align: right;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar-meta strong { color: var(--text-2); font-weight: 600; }
+
+  /* ── Hero stats strip ────────────────────────────── */
+  .hero {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 32px 0;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .stat-cell {
+    background: var(--surface);
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    gap: 6px;
+    cursor: default;
+    transition: background 0.15s;
   }
-  .bento-card:hover {
-    border-color: var(--border-hover);
-  }
-
-  .bento-card h2 {
-    font-size: 0.8rem;
+  .stat-cell[data-clickable] { cursor: pointer; }
+  .stat-cell[data-clickable]:hover { background: var(--surface-2); }
+  .stat-label {
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: var(--text-muted);
-    margin-bottom: 1.25rem;
+    letter-spacing: 1px;
+    color: var(--text-3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stat-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .stat-value {
+    font-size: 36px;
     font-weight: 700;
+    line-height: 1;
+    color: var(--text-1);
+    letter-spacing: -1px;
+  }
+  .stat-sub {
+    font-size: 12px;
+    color: var(--text-3);
+    font-weight: 500;
   }
 
-  /* Bento Sizes */
-  .col-4 { grid-column: span 4; }
-  .col-5 { grid-column: span 5; }
-  .col-3 { grid-column: span 3; }
-  .col-8 { grid-column: span 8; }
-  .col-6 { grid-column: span 6; }
-  .col-12 { grid-column: span 12; }
-  
-  @media (max-width: 1024px) {
-    .col-4, .col-5, .col-3, .col-8, .col-6 {
-      grid-column: span 6;
-    }
+  /* ── Info row (score + project info) ─────────────── */
+  .info-row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-top: 20px;
   }
-  @media (max-width: 768px) {
-    .col-4, .col-5, .col-3, .col-8, .col-6 {
-      grid-column: span 12;
-    }
-    .header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1rem;
-    }
-    .subtitle {
-      text-align: left;
-    }
+  @media (max-width: 680px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .info-row { grid-template-columns: 1fr; }
   }
-
-  /* Score Ring */
-  .score-widget {
+  .score-cell {
+    background: var(--surface);
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    text-align: center;
+    gap: 12px;
   }
-  .score-ring-container {
-    width: 140px;
-    height: 140px;
+  .score-ring-wrap {
     position: relative;
-    margin-bottom: 1rem;
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
   }
-  .score-ring-container svg {
-    width: 100%;
-    height: 100%;
+  .score-ring-wrap svg {
+    width: 120px;
+    height: 120px;
     transform: rotate(-90deg);
   }
-  .score-ring-container circle {
+  .score-ring-wrap circle {
     fill: none;
-    stroke-width: 8;
+    stroke-width: 7;
   }
-  .score-ring-container .bg {
-    stroke: var(--border);
-  }
-  .score-ring-container .fg {
+  .score-ring-wrap .ring-bg { stroke: var(--border-2); }
+  .score-ring-wrap .ring-fg {
     stroke-linecap: round;
-    transition: stroke-dashoffset 1s ease-in-out;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1);
   }
-  .score-text {
+  .score-inner {
     position: absolute;
     inset: 0;
     display: flex;
@@ -201,1115 +272,974 @@ export function generateHtmlReport(report: AuditReport, outputPath: string): voi
     align-items: center;
     justify-content: center;
   }
-  .score-val {
-    font-size: 2.5rem;
-    font-weight: 800;
-    line-height: 1;
-  }
-  .score-max {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    font-weight: 500;
-    margin-top: 0.15rem;
-  }
-  .grade-badge {
-    padding: 0.35rem 1.25rem;
-    border-radius: 999px;
-    font-size: 1.125rem;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-
-  /* Findings breakdown */
-  .breakdown-list {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-    height: 100%;
-  }
-  .breakdown-item {
-    background-color: rgba(255,255,255,0.02);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.75rem 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    transition: background-color 0.2s;
-  }
-  .breakdown-item:hover {
-    background-color: rgba(255,255,255,0.04);
-  }
-  .breakdown-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  }
-  .breakdown-val {
-    font-size: 1.5rem;
+  .score-num {
+    font-size: 28px;
     font-weight: 700;
     line-height: 1;
+    letter-spacing: -1px;
   }
-  .breakdown-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+  .score-denom {
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 500;
+  }
+  .grade-pill {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border-2);
+    color: var(--text-2);
+    background: var(--surface-2);
+    letter-spacing: 0.5px;
+  }
+  .score-label {
+    font-size: 11px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-3);
   }
 
-  /* Project Info */
-  .info-table {
+  .project-cell {
+    background: var(--surface);
+    padding: 24px 28px;
+  }
+  .project-cell h2 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-3);
+    margin-bottom: 16px;
+  }
+  .info-rows-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.85rem;
   }
-  .info-table tr {
-    border-bottom: 1px solid rgba(255,255,255,0.03);
+  .info-rows-table tr {
+    border-bottom: 1px solid var(--border);
   }
-  .info-table tr:last-child {
-    border-bottom: none;
+  .info-rows-table tr:last-child { border-bottom: none; }
+  .info-rows-table td {
+    padding: 10px 0;
+    vertical-align: top;
+    font-size: 13px;
   }
-  .info-table td {
-    padding: 0.55rem 0;
-    vertical-align: middle;
-  }
-  .info-table td:first-child {
-    color: var(--text-muted);
+  .info-rows-table td:first-child {
+    color: var(--text-3);
     font-weight: 500;
-    width: 40%;
+    width: 160px;
+    padding-right: 16px;
+    white-space: nowrap;
   }
-  .info-table td:last-child {
-    color: var(--text-secondary);
-    text-align: right;
-    font-weight: 600;
+  .info-rows-table td:last-child {
+    color: var(--text-2);
+    min-width: 0;
+    word-break: break-word;
   }
-  .lang-tag {
-    background-color: var(--border);
-    padding: 0.15rem 0.4rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    margin-left: 0.25rem;
-    display: inline-block;
-  }
-
-  /* Radar Chart Container */
-  .radar-container {
-    display: flex;
-    justify-content: center;
+  .lang-chip {
+    display: inline-flex;
     align-items: center;
-    flex-grow: 1;
-  }
-  .radar-chart {
-    max-width: 100%;
-    height: 160px;
-  }
-
-  /* Agent Trace Timeline */
-  .trace-section {
-    background-color: var(--surface-card);
+    gap: 4px;
+    background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+    border-radius: var(--radius-sm);
+    padding: 1px 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-2);
+    margin: 2px 2px 2px 0;
   }
-  .trace-header {
+  .lang-chip sub { font-size: 10px; color: var(--text-3); }
+
+  /* ── Main content body ───────────────────────────── */
+  .main-content {
+    padding: 24px 0 64px;
+  }
+  .content-grid {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 820px) {
+    .content-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Agent Trace (if present) ─────────────────────── */
+  .trace-block {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .trace-toggle {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
     cursor: pointer;
     user-select: none;
+    gap: 12px;
   }
-  .trace-header.collapsed {
-    /* Collapsed state modifier */
-  }
-  .trace-header h2 {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: var(--text-muted);
-    font-weight: 700;
+  .trace-toggle:hover { background: var(--surface-2); }
+  .trace-toggle-left {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-2);
+    min-width: 0;
   }
-  .trace-header-meta {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
+  .trace-toggle-right {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-3);
+    flex-shrink: 0;
   }
-  .trace-chevron {
+  .trace-toggle-right strong { color: var(--text-2); }
+  .chevron {
+    width: 16px;
+    height: 16px;
+    stroke: var(--text-3);
     transition: transform 0.2s;
+    flex-shrink: 0;
   }
-  .trace-header.collapsed .trace-chevron {
-    transform: rotate(-90deg);
-  }
-  .trace-content {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-  .trace-header.collapsed + .trace-content {
+  .trace-block.open .chevron { transform: rotate(180deg); }
+  .trace-body {
     display: none;
+    border-top: 1px solid var(--border);
+    padding: 20px;
   }
+  .trace-block.open .trace-body { display: block; }
   .timeline {
-    position: relative;
-    padding-left: 1.5rem;
+    padding-left: 20px;
     border-left: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 16px;
   }
-  .timeline-item {
-    position: relative;
-  }
-  .timeline-node {
+  .tl-item { position: relative; }
+  .tl-dot {
     position: absolute;
-    left: calc(-1.5rem - 5px);
+    left: calc(-20px - 4px);
     top: 5px;
-    width: 9px;
-    height: 9px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    background-color: var(--border);
+    background: var(--border-2);
     border: 2px solid var(--bg);
   }
-  .timeline-node.success { background-color: var(--teal); }
-  .timeline-node.error { background-color: var(--critical); }
-  .timeline-node.fallback { background-color: var(--medium); }
-  
-  .timeline-title {
-    font-size: 0.875rem;
-    font-weight: 700;
+  .tl-dot.ok   { background: var(--sev-success); }
+  .tl-dot.fail { background: var(--sev-critical); }
+  .tl-title {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-  }
-  .timeline-title .time {
-    color: var(--text-muted);
-    font-weight: 500;
-    font-size: 0.75rem;
-  }
-  .timeline-body {
-    margin-top: 0.5rem;
-    background-color: rgba(0,0,0,0.2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-  }
-  .timeline-body summary {
-    cursor: pointer;
-    user-select: none;
+    gap: 8px;
+    font-size: 13px;
     font-weight: 600;
-    color: var(--text-secondary);
   }
-  .timeline-body details pre {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
+  .tl-dur {
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 400;
+  }
+  .tl-details {
+    margin-top: 6px;
+    font-size: 12px;
+  }
+  .tool-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 16px;
+    padding-top: 16px;
     border-top: 1px solid var(--border);
-    max-height: 180px;
-    overflow-y: auto;
-    font-size: 0.75rem;
-    color: #a5b4fc;
-    white-space: pre-wrap;
-    word-break: break-all;
+  }
+  .tool-chip {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 3px 8px;
+    font-size: 11px;
+    color: var(--text-3);
   }
 
-  /* Findings & Categories Layout */
-  .explorer {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 1.5rem;
-    align-items: start;
-  }
-  @media (max-width: 900px) {
-    .explorer {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  /* Category List (Sidebar) */
-  .category-sidebar {
-    background-color: var(--surface-card);
+  /* ── Category sidebar ─────────────────────────────── */
+  .cat-sidebar {
+    background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  .sidebar-header {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-muted);
-    padding: 0.5rem;
-    font-weight: 700;
-  }
-  .cat-tab {
-    background: none;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    padding: 0.75rem;
-    color: var(--text-secondary);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    width: 100%;
-    text-align: left;
-    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-  }
-  .cat-tab:hover {
-    background-color: var(--surface-hover);
-    color: var(--text-primary);
-  }
-  .cat-tab.active {
-    background-color: rgba(45, 191, 173, 0.08);
-    border-color: rgba(45, 191, 173, 0.2);
-    color: var(--text-primary);
-  }
-  .cat-tab-title {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-weight: 600;
-  }
-  .cat-tab-icon {
-    font-size: 1.125rem;
-  }
-  .cat-tab-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .cat-tab-count {
-    background-color: var(--border);
-    font-size: 0.75rem;
-    padding: 0.15rem 0.5rem;
-    border-radius: 999px;
-    font-weight: 700;
-    color: var(--text-muted);
-  }
-  .cat-tab.active .cat-tab-count {
-    background-color: var(--teal);
-    color: #090b11;
-  }
-  .cat-tab-score {
-    font-weight: 700;
-    font-size: 0.875rem;
-  }
-
-  /* Findings Dashboard */
-  .findings-dashboard {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-  
-  /* Filters */
-  .filter-panel {
-    background-color: var(--surface-card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-  .search-wrapper {
-    position: relative;
-    flex-grow: 1;
-    max-width: 400px;
-  }
-  .search-input {
-    width: 100%;
-    background-color: rgba(0,0,0,0.2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.5rem 1rem 0.5rem 2.25rem;
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: 0.875rem;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .search-input:focus {
-    border-color: var(--teal);
-  }
-  .search-icon {
-    position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
-    stroke: var(--text-muted);
-  }
-  .severity-filters {
-    display: flex;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-  }
-  .sev-filter-btn {
-    background: rgba(255,255,255,0.02);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.4rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--text-secondary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    transition: all 0.2s;
-  }
-  .sev-filter-btn:hover {
-    background-color: var(--surface-hover);
-  }
-  .sev-filter-btn.active {
-    background-color: var(--btn-active-bg);
-    border-color: var(--btn-active-border);
-    color: var(--btn-active-text);
-  }
-
-  /* Findings List */
-  .findings-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-  .no-findings {
-    text-align: center;
-    padding: 4rem 2rem;
-    color: var(--text-muted);
-    background-color: var(--surface-card);
-    border: 1px dashed var(--border);
-    border-radius: 16px;
-  }
-  .no-findings-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-  }
-
-  /* Findings Card */
-  .finding-card {
-    background-color: var(--surface-card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    transition: border-color 0.2s;
-  }
-  .finding-card:hover {
-    border-color: var(--border-hover);
-  }
-  .finding-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-  .finding-title-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-  .finding-badge {
-    font-size: 0.65rem;
-    font-weight: 800;
-    padding: 0.15rem 0.45rem;
-    border-radius: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .finding-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-  .finding-meta {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  .finding-file-link {
-    color: var(--teal);
-    font-family: 'Fira Code', monospace;
-    font-weight: 500;
-  }
-  .finding-desc {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-  }
-
-  /* Code Block Wrapper */
-  .code-panel {
-    background-color: #06080d;
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
-    margin-top: 0.5rem;
+    /* Sticky within scroll */
+    position: sticky;
+    top: 72px;
   }
-  .code-panel-header {
-    background-color: rgba(255,255,255,0.02);
-    padding: 0.4rem 0.75rem;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.7rem;
-    color: var(--text-muted);
-  }
-  .code-panel-body {
-    padding: 0.75rem;
-    overflow-x: auto;
-  }
-  .code-panel-body pre {
-    font-size: 0.75rem;
-    color: #e2e8f0;
-    white-space: pre;
-    line-height: 1.5;
-  }
-
-  /* Proposed Fix Panel */
-  .fix-panel {
-    border-left: 3px solid var(--success);
-    background-color: rgba(16, 185, 129, 0.03);
-    padding: 0.75rem 1rem;
-    border-radius: 0 8px 8px 0;
-    font-size: 0.85rem;
-    margin-top: 0.5rem;
-  }
-  .fix-panel strong {
-    color: var(--success);
+  .cat-sidebar-hdr {
+    padding: 12px 16px;
+    font-size: 10px;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-3);
+    border-bottom: 1px solid var(--border);
+  }
+  .cat-btn {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    margin-bottom: 0.25rem;
-  }
-
-  .copy-btn {
+    justify-content: space-between;
+    width: 100%;
+    padding: 11px 16px;
     background: none;
     border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-2);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
-    color: var(--text-muted);
+    text-align: left;
+    gap: 8px;
+    transition: background 0.1s, color 0.1s;
+  }
+  .cat-btn:last-child { border-bottom: none; }
+  .cat-btn:hover { background: var(--surface-2); color: var(--text-1); }
+  .cat-btn.active {
+    background: var(--text-1);
+    color: var(--text-inv);
+  }
+  .cat-btn-left {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-    font-size: 0.7rem;
-    font-family: inherit;
-    font-weight: 600;
-    transition: color 0.2s;
+    gap: 8px;
+    min-width: 0;
   }
-  .copy-btn:hover {
-    color: var(--text-primary);
+  .cat-btn-icon { font-size: 14px; }
+  .cat-btn-name { font-weight: 600; }
+  .cat-btn-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
   }
-  .copy-btn.copied {
-    color: var(--success);
+  .cat-count {
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(255,255,255,0.07);
+    padding: 1px 6px;
+    border-radius: 999px;
+    color: var(--text-3);
+  }
+  .cat-btn.active .cat-count {
+    background: rgba(0,0,0,0.15);
+    color: var(--text-inv);
+  }
+  .cat-score {
+    font-size: 12px;
+    font-weight: 700;
   }
 
-  /* Footer Section */
-  .footer {
-    text-align: center;
-    padding-top: 3rem;
-    border-top: 1px solid var(--border);
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    font-weight: 500;
-    margin-top: 4rem;
+  /* ── Findings panel ──────────────────────────────── */
+  .findings-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
   }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 160px;
+    max-width: 340px;
+  }
+  .search-ico {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    stroke: var(--text-3);
+    pointer-events: none;
+  }
+  .search-inp {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 7px 10px 7px 30px;
+    color: var(--text-1);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-inp:focus { border-color: var(--border-2); }
+  .search-inp::placeholder { color: var(--text-3); }
+  .sev-btns {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .sev-btn {
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-3);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .sev-btn:hover { border-color: var(--border-2); color: var(--text-2); }
+  .sev-btn.active {
+    border-color: var(--border-2);
+    background: var(--surface-2);
+    color: var(--text-1);
+  }
+  .sev-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Finding cards */
+  .findings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  .finding-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color 0.15s;
+    min-width: 0;
+  }
+  .finding-card:hover { border-color: var(--border-2); }
+
+  .finding-card-top {
+    padding: 16px 18px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+  .finding-row1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .sev-badge {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .finding-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-1);
+    min-width: 0;
+    word-break: break-word;
+  }
+  .finding-id {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .finding-file {
+    font-size: 12px;
+    color: var(--text-3);
+    font-family: 'Fira Code', monospace;
+    word-break: break-all;
+    min-width: 0;
+  }
+  .finding-desc {
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.55;
+    min-width: 0;
+    word-break: break-word;
+  }
+
+  /* Code panel */
+  .code-block {
+    border-top: 1px solid var(--border);
+    background: #050505;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .code-block-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-3);
+    background: rgba(255,255,255,0.02);
+    gap: 8px;
+  }
+  .code-block-body {
+    padding: 12px 14px;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  .code-block-body pre {
+    font-size: 12px;
+    color: #c9d1d9;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* Fix panel */
+  .fix-block {
+    border-top: 1px solid var(--border);
+    padding: 14px 18px;
+    background: rgba(34, 197, 94, 0.03);
+    border-left: 3px solid var(--sev-success);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .fix-block-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .fix-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--sev-success);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .copy-btn {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-3);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .copy-btn:hover { color: var(--text-1); border-color: var(--border-2); }
+  .copy-btn.copied { color: var(--sev-success); border-color: var(--sev-success); }
+  .fix-text {
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.55;
+    word-break: break-word;
+    min-width: 0;
+  }
+
+  /* Empty state */
+  .empty-state {
+    padding: 60px 24px;
+    text-align: center;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+    color: var(--text-3);
+  }
+  .empty-state h3 { font-size: 16px; color: var(--text-2); margin-bottom: 6px; }
+
+  /* ── Footer ──────────────────────────────────────── */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 20px 24px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-3);
+  }
+  .footer a { color: var(--text-3); }
+  .footer a:hover { color: var(--text-2); }
 </style>
 </head>
 <body>
-<div class="container">
+<div class="page">
 
-  <!-- Main Header -->
-  <header class="header">
-    <div class="logo">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--teal)">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      </svg>
-      <span>Ghost</span>Proto
-    </div>
-    <div class="subtitle">
-      <div>AI-Powered Codebase Audit Report</div>
-      <div style="margin-top:0.2rem"><strong>${esc(report.project.name)}</strong> · ${new Date(report.timestamp).toLocaleString()}</div>
+  <!-- ── Top nav ───────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      ${logoHtml}
+      <div class="topbar-meta">
+        AI-Powered Codebase Audit &nbsp;·&nbsp;
+        <strong>${esc(report.project.name)}</strong>
+        &nbsp;·&nbsp;
+        ${new Date(report.timestamp).toLocaleString()}
+      </div>
     </div>
   </header>
 
-  <!-- Bento grid of stats -->
-  <div class="bento-grid">
-    <!-- Score widget -->
-    <div class="bento-card col-4 score-widget">
-      <h2>Overall Score</h2>
-      <div class="score-ring-container">
-        <svg viewBox="0 0 120 120">
-          <circle class="bg" cx="60" cy="60" r="54"/>
-          <circle class="fg" id="overall-ring-fg" cx="60" cy="60" r="54" style="stroke:var(--border);stroke-dasharray:339;stroke-dashoffset:339"/>
-        </svg>
-        <div class="score-text">
-          <span class="score-val" id="overall-score-val" style="color:var(--text-muted)">0</span>
-          <span class="score-max">/ 100</span>
+  <!-- ── Hero stats ─────────────────────────────────── -->
+  <section class="hero">
+    <div class="wrap">
+      <!-- Severity distribution tiles -->
+      <div class="stats-grid">
+        <div class="stat-cell" data-clickable onclick="filterSeverity('critical')">
+          <div class="stat-label">
+            <span class="stat-dot" style="background:var(--sev-critical)"></span>
+            Critical
+          </div>
+          <div class="stat-value" style="color:var(--sev-critical)">${report.criticalCount}</div>
+          <div class="stat-sub">findings requiring immediate action</div>
+        </div>
+        <div class="stat-cell" data-clickable onclick="filterSeverity('high')">
+          <div class="stat-label">
+            <span class="stat-dot" style="background:var(--sev-high)"></span>
+            High
+          </div>
+          <div class="stat-value" style="color:var(--sev-high)">${report.highCount}</div>
+          <div class="stat-sub">significant issues to address</div>
+        </div>
+        <div class="stat-cell" data-clickable onclick="filterSeverity('medium')">
+          <div class="stat-label">
+            <span class="stat-dot" style="background:var(--sev-medium)"></span>
+            Medium
+          </div>
+          <div class="stat-value" style="color:var(--sev-medium)">${report.mediumCount}</div>
+          <div class="stat-sub">moderate risk items</div>
+        </div>
+        <div class="stat-cell" data-clickable onclick="filterSeverity('low')">
+          <div class="stat-label">
+            <span class="stat-dot" style="background:var(--sev-low)"></span>
+            Low / Info
+          </div>
+          <div class="stat-value" style="color:var(--sev-low)">${report.lowCount}</div>
+          <div class="stat-sub">informational findings</div>
         </div>
       </div>
-      <span class="grade-badge" id="overall-grade-badge">--</span>
-    </div>
 
-    <!-- Severity distribution -->
-    <div class="bento-card col-5">
-      <h2>Findings Distribution</h2>
-      <div class="breakdown-list">
-        <div class="breakdown-item" style="cursor:pointer" onclick="filterBySeverity('critical')">
-          <div class="breakdown-dot" style="background-color:var(--critical)"></div>
-          <div>
-            <div class="breakdown-val" style="color:var(--critical)">${report.criticalCount}</div>
-            <div class="breakdown-label">Critical</div>
+      <!-- Score ring + project info -->
+      <div class="info-row">
+        <!-- Score -->
+        <div class="score-cell">
+          <div class="score-label">Overall Score</div>
+          <div class="score-ring-wrap">
+            <svg viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="52"/>
+              <circle class="ring-fg" id="score-ring" cx="60" cy="60" r="52"
+                style="stroke:var(--border-2);stroke-dasharray:327;stroke-dashoffset:327"/>
+            </svg>
+            <div class="score-inner">
+              <span class="score-num" id="score-num" style="color:var(--text-3)">0</span>
+              <span class="score-denom">/ 100</span>
+            </div>
           </div>
+          <span class="grade-pill" id="grade-pill">--</span>
         </div>
-        <div class="breakdown-item" style="cursor:pointer" onclick="filterBySeverity('high')">
-          <div class="breakdown-dot" style="background-color:var(--high)"></div>
-          <div>
-            <div class="breakdown-val" style="color:var(--high)">${report.highCount}</div>
-            <div class="breakdown-label">High</div>
-          </div>
-        </div>
-        <div class="breakdown-item" style="cursor:pointer" onclick="filterBySeverity('medium')">
-          <div class="breakdown-dot" style="background-color:var(--medium)"></div>
-          <div>
-            <div class="breakdown-val" style="color:var(--medium)">${report.mediumCount}</div>
-            <div class="breakdown-label">Medium</div>
-          </div>
-        </div>
-        <div class="breakdown-item" style="cursor:pointer" onclick="filterBySeverity('low')">
-          <div class="breakdown-dot" style="background-color:var(--low)"></div>
-          <div>
-            <div class="breakdown-val" style="color:var(--low)">${report.lowCount}</div>
-            <div class="breakdown-label">Low / Info</div>
-          </div>
+
+        <!-- Project info table -->
+        <div class="project-cell">
+          <h2>Project Profile</h2>
+          <table class="info-rows-table">
+            <tr>
+              <td>Directory</td>
+              <td><code>${esc(report.project.name)}</code></td>
+            </tr>
+            <tr>
+              <td>Languages</td>
+              <td>
+                ${Object.entries(report.project.languages).map(([l, c]) =>
+                  `<span class="lang-chip">${esc(l)}<sub>${c} files</sub></span>`
+                ).join('')}
+              </td>
+            </tr>
+            ${report.project.frameworks.length ? `<tr>
+              <td>Frameworks</td>
+              <td>${report.project.frameworks.map(f => `<span class="lang-chip">${esc(f)}</span>`).join('')}</td>
+            </tr>` : ''}
+            <tr>
+              <td>Scanned</td>
+              <td>
+                <strong>${report.project.totalFiles.toLocaleString()}</strong> files
+                &nbsp;·&nbsp;
+                <strong>${report.project.totalLines.toLocaleString()}</strong> LOC
+                &nbsp;·&nbsp;
+                Tests: <strong>${report.project.hasTests ? 'Detected' : 'None'}</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>Engine</td>
+              <td>
+                ${report.agentic
+                  ? '✦ Agentic Loop (Proto Engine)'
+                  : report.aiPowered
+                    ? '✦ One-shot AI (Proto Engine)'
+                    : '⚡ Static Analysis'}
+                &nbsp;·&nbsp;
+                <strong>${report.durationMs < 1000 ? report.durationMs + ' ms' : (report.durationMs / 1000).toFixed(1) + ' s'}</strong>
+              </td>
+            </tr>
+          </table>
         </div>
       </div>
     </div>
+  </section>
 
-    <!-- Radar Chart of categories -->
-    <div class="bento-card col-3">
-      <h2>Category Profiles</h2>
-      <div class="radar-container">
-        <svg viewBox="0 0 300 300" class="radar-chart" id="radar-chart-svg">
-          <!-- Rendered dynamically by script -->
-        </svg>
-      </div>
-    </div>
+  <!-- ── Main body ──────────────────────────────────── -->
+  <main class="main-content">
+    <div class="wrap">
 
-    <!-- Project info -->
-    <div class="bento-card col-12">
-      <h2>Project Profile</h2>
-      <table class="info-table">
-        <tr>
-          <td>Directory / Name</td>
-          <td><code>${esc(report.project.name)}</code></td>
-        </tr>
-        <tr>
-          <td>Languages Used</td>
-          <td>
-            ${Object.entries(report.project.languages).map(([l, c]) => `<code>${esc(l)}</code><span class="lang-tag">${c} files</span>`).join(' ')}
-          </td>
-        </tr>
-        ${report.project.frameworks.length ? `
-        <tr>
-          <td>Frameworks / Libraries</td>
-          <td>
-            ${report.project.frameworks.map(f => `<code>${esc(f)}</code>`).join(' · ')}
-          </td>
-        </tr>` : ''}
-        <tr>
-          <td>Analysis Metrics</td>
-          <td>
-            Scanned <strong>${report.project.totalFiles.toLocaleString()} files</strong> (${report.project.totalLines.toLocaleString()} LOC) · Tests: <strong>${report.project.hasTests ? 'Detected' : 'None'}</strong>
-          </td>
-        </tr>
-        <tr>
-          <td>Audit Engine Type</td>
-          <td>
-            <span style="color:var(--teal);font-weight:700">
-              ${report.agentic ? '✦ Agentic Loop (Proto Engine)' : report.aiPowered ? '✦ One-shot AI (Proto Engine)' : '⚡ Static Analysis'}
+      <!-- Agent trace (conditionally rendered) -->
+      <div id="trace-container"></div>
+
+      <!-- Two-column explorer -->
+      <div class="content-grid">
+
+        <!-- Category sidebar -->
+        <aside class="cat-sidebar" id="cat-sidebar">
+          <div class="cat-sidebar-hdr">Categories</div>
+          <button class="cat-btn active" id="tab-all" onclick="selectCategory('all')">
+            <span class="cat-btn-left">
+              <span class="cat-btn-icon">◈</span>
+              <span class="cat-btn-name">All</span>
             </span>
-            · took <strong>${report.durationMs < 1000 ? report.durationMs + ' ms' : (report.durationMs / 1000).toFixed(1) + ' s'}</strong>
-          </td>
-        </tr>
-      </table>
-    </div>
-  </div>
+            <span class="cat-btn-right">
+              <span class="cat-count">${report.allFindings.length}</span>
+            </span>
+          </button>
+          <div id="cat-tabs"></div>
+        </aside>
 
-  <!-- Agent Trace timeline (if agentic) -->
-  <div id="trace-container"></div>
+        <!-- Findings panel -->
+        <div class="findings-panel">
 
-  <!-- Findings section -->
-  <div class="explorer">
-    <!-- Sidebar navigation -->
-    <aside class="category-sidebar">
-      <div class="sidebar-header">Select Category</div>
-      <button class="cat-tab active" id="tab-all" onclick="selectCategory('all')">
-        <span class="cat-tab-title"><span class="cat-tab-icon">🌐</span> All Categories</span>
-        <span class="cat-tab-meta">
-          <span class="cat-tab-count">${report.allFindings.length}</span>
-        </span>
-      </button>
-      <div id="category-tabs-list"></div>
-    </aside>
+          <!-- Filter bar -->
+          <div class="filter-bar">
+            <div class="search-wrap">
+              <svg class="search-ico" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="text" class="search-inp" id="search-box"
+                placeholder="Search findings, files, fixes…" oninput="handleSearch()">
+            </div>
+            <div class="sev-btns">
+              <button class="sev-btn active" id="sev-all" onclick="filterSeverity('all')">All</button>
+              <button class="sev-btn" id="sev-critical" onclick="filterSeverity('critical')">
+                <span class="sev-dot" style="background:var(--sev-critical)"></span>Critical
+              </button>
+              <button class="sev-btn" id="sev-high" onclick="filterSeverity('high')">
+                <span class="sev-dot" style="background:var(--sev-high)"></span>High
+              </button>
+              <button class="sev-btn" id="sev-medium" onclick="filterSeverity('medium')">
+                <span class="sev-dot" style="background:var(--sev-medium)"></span>Medium
+              </button>
+              <button class="sev-btn" id="sev-low" onclick="filterSeverity('low')">
+                <span class="sev-dot" style="background:var(--sev-low)"></span>Low
+              </button>
+            </div>
+          </div>
 
-    <!-- Findings main workspace -->
-    <main class="findings-dashboard">
-      <!-- Search & Filters -->
-      <section class="filter-panel">
-        <div class="search-wrapper">
-          <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <input type="text" class="search-input" id="search-box" placeholder="Search findings, files, or fixes..." oninput="handleSearch()">
+          <!-- Findings list -->
+          <div class="findings-list" id="findings-list"></div>
+
         </div>
-        <div class="severity-filters">
-          <button class="sev-filter-btn active" id="sev-all" onclick="filterSeverity('all')">All</button>
-          <button class="sev-filter-btn" id="sev-critical" style="--btn-active-bg:rgba(239,68,68,0.1);--btn-active-border:rgba(239,68,68,0.3);--btn-active-text:var(--critical)" onclick="filterSeverity('critical')">
-            <span style="color:var(--critical)">●</span> Critical
-          </button>
-          <button class="sev-filter-btn" id="sev-high" style="--btn-active-bg:rgba(249,115,22,0.1);--btn-active-border:rgba(249,115,22,0.3);--btn-active-text:var(--high)" onclick="filterSeverity('high')">
-            <span style="color:var(--high)">●</span> High
-          </button>
-          <button class="sev-filter-btn" id="sev-medium" style="--btn-active-bg:rgba(234,179,8,0.1);--btn-active-border:rgba(234,179,8,0.3);--btn-active-text:var(--medium)" onclick="filterSeverity('medium')">
-            <span style="color:var(--medium)">●</span> Medium
-          </button>
-          <button class="sev-filter-btn" id="sev-low" style="--btn-active-bg:rgba(59,130,246,0.1);--btn-active-border:rgba(59,130,246,0.3);--btn-active-text:var(--low)" onclick="filterSeverity('low')">
-            <span style="color:var(--low)">●</span> Low / Info
-          </button>
-        </div>
-      </section>
-
-      <!-- Findings List -->
-      <div class="findings-container" id="findings-list-wrapper">
-        <!-- Rendered dynamically -->
       </div>
-    </main>
-  </div>
+    </div>
+  </main>
 
+  <!-- ── Footer ─────────────────────────────────────── -->
   <footer class="footer">
-    Generated by <a href="https://github.com/AtlasRoX/Ghost-Proto">ghostproto</a> · AI-powered codebase auditor
+    Generated by <a href="https://github.com/AtlasRoX/Ghost-Proto" target="_blank">ghostproto</a>
+    &nbsp;·&nbsp; AI-powered codebase auditor
   </footer>
-</div>
 
-<!-- Embedded JSON report data -->
+</div><!-- /page -->
+
+<script>const AUDIT_DATA = ${serializedReport};</script>
 <script>
-  const AUDIT_DATA = ${serializedReport};
-</script>
+  'use strict';
 
-<script>
-  // Global SPA State
-  let currentCategory = 'all';
-  let currentSeverity = 'all';
-  let searchText = '';
+  // ── State ──────────────────────────────────────────
+  let CAT   = 'all';
+  let SEV   = 'all';
+  let QUERY = '';
 
-  const CATEGORY_ICONS = {
-    security: '🔒',
-    quality: '📊',
-    performance: '⚡',
-    architecture: '🏗️',
-    dependencies: '📦',
-    testing: '🧪',
-    documentation: '📚'
+  const SEV_COLORS = {
+    critical : 'var(--sev-critical)',
+    high     : 'var(--sev-high)',
+    medium   : 'var(--sev-medium)',
+    low      : 'var(--sev-low)',
+    info     : 'var(--sev-info)',
   };
 
-  const SEVERITY_COLORS = {
-    critical: 'var(--critical)',
-    high: 'var(--high)',
-    medium: 'var(--medium)',
-    low: 'var(--low)',
-    info: 'var(--info)'
+  const CAT_ICONS = {
+    security     : '🔒',
+    quality      : '📊',
+    performance  : '⚡',
+    architecture : '🏗️',
+    dependencies : '📦',
+    testing      : '🧪',
+    documentation: '📚',
   };
 
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+  // ── Helpers ────────────────────────────────────────
+  function esc(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+      .replace(/'/g,'&#039;');
   }
 
-  function getScoreColor(score) {
-    if (score >= 80) return 'var(--success)';
-    if (score >= 60) return 'var(--teal)';
-    if (score >= 40) return 'var(--medium)';
-    return 'var(--critical)';
+  function scoreColor(s) {
+    if (s >= 80) return 'var(--sev-success)';
+    if (s >= 60) return 'var(--text-2)';
+    if (s >= 40) return 'var(--sev-medium)';
+    return 'var(--sev-critical)';
   }
 
-  // Init Score Circle animation
+  // ── Score ring animation ───────────────────────────
   function animateScore() {
-    const ring = document.getElementById('overall-ring-fg');
-    const scoreVal = document.getElementById('overall-score-val');
-    const gradeBadge = document.getElementById('overall-grade-badge');
-    const score = AUDIT_DATA.overallScore;
-    const grade = AUDIT_DATA.overallGrade;
-    const color = getScoreColor(score);
+    const ring   = document.getElementById('score-ring');
+    const numEl  = document.getElementById('score-num');
+    const grade  = document.getElementById('grade-pill');
+    const score  = AUDIT_DATA.overallScore;
+    const color  = scoreColor(score);
+    const circ   = 327; // 2π × r(52)
 
-    // Score ring stroke-dashoffset animate
-    ring.style.stroke = color;
-    ring.style.strokeDashoffset = 339 - (339 * score / 100);
+    ring.style.stroke            = color;
+    ring.style.strokeDashoffset  = circ - (circ * score / 100);
+    numEl.style.color            = color;
 
-    // Number text incremental animate
     let cur = 0;
-    const timer = setInterval(() => {
-      if (cur >= score) {
-        scoreVal.innerText = score;
-        clearInterval(timer);
-      } else {
-        cur += Math.ceil((score - cur) / 10);
-        scoreVal.innerText = cur;
-      }
-    }, 30);
-    scoreVal.style.color = color;
+    const iv = setInterval(() => {
+      cur += Math.ceil((score - cur) / 8) || 1;
+      if (cur >= score) { cur = score; clearInterval(iv); }
+      numEl.textContent = cur;
+    }, 28);
 
-    // Grade badge
-    gradeBadge.innerText = grade;
-    gradeBadge.style.backgroundColor = color + '15';
-    gradeBadge.style.color = color;
-    gradeBadge.style.border = '1px solid ' + color + '30';
+    grade.textContent              = AUDIT_DATA.overallGrade || '--';
+    grade.style.borderColor        = color + '40';
+    grade.style.color              = color;
   }
 
-  // Draw Radar Chart SVG
-  function drawRadarChart() {
-    const svg = document.getElementById('radar-chart-svg');
-    const cats = AUDIT_DATA.categories;
-    const cx = 150;
-    const cy = 150;
-    const maxRadius = 90;
-    const numPoints = cats.length;
-
-    let gridPolygons = '';
-    // Draw concentric rings
-    for (let r = 0.2; r <= 1.0; r += 0.2) {
-      let pts = [];
-      for (let i = 0; i < numPoints; i++) {
-        const angle = (Math.PI * 2 * i / numPoints) - (Math.PI / 2);
-        const x = cx + maxRadius * r * Math.cos(angle);
-        const y = cy + maxRadius * r * Math.sin(angle);
-        pts.push(x + ',' + y);
-      }
-      gridPolygons += '<polygon points="' + pts.join(' ') + '" fill="none" stroke="var(--border)" stroke-width="1" />\\n';
-    }
-
-    // Draw axis lines
-    let axisLines = '';
-    let axisLabels = '';
-    for (let i = 0; i < numPoints; i++) {
-      const angle = (Math.PI * 2 * i / numPoints) - (Math.PI / 2);
-      const xOuter = cx + maxRadius * Math.cos(angle);
-      const yOuter = cy + maxRadius * Math.sin(angle);
-      axisLines += '<line x1="' + cx + '" y1="' + cy + '" x2="' + xOuter + '" y2="' + yOuter + '" stroke="var(--border)" stroke-width="1" />\\n';
-
-      // Label positioning offset
-      const labelX = cx + (maxRadius + 20) * Math.cos(angle);
-      const labelY = cy + (maxRadius + 12) * Math.sin(angle);
-      const catName = cats[i].category.charAt(0).toUpperCase() + cats[i].category.slice(1);
-      const textAnchor = Math.abs(Math.cos(angle)) < 0.1 ? 'middle' : Math.cos(angle) > 0 ? 'start' : 'end';
-      axisLabels += '<text x="' + labelX + '" y="' + labelY + '" fill="var(--text-muted)" font-size="8" font-weight="700" text-anchor="' + textAnchor + '">' + catName + '</text>\\n';
-    }
-
-    // Draw the actual data shape
-    let dataPoints = [];
-    for (let i = 0; i < numPoints; i++) {
-      const angle = (Math.PI * 2 * i / numPoints) - (Math.PI / 2);
-      const val = cats[i].score / 100;
-      const x = cx + maxRadius * val * Math.cos(angle);
-      const y = cy + maxRadius * val * Math.sin(angle);
-      dataPoints.push(x + ',' + y);
-    }
-    const dataShape = '<polygon points="' + dataPoints.join(' ') + '" fill="rgba(45, 191, 173, 0.25)" stroke="var(--teal)" stroke-width="2" />\\n';
-
-    svg.innerHTML = gridPolygons + axisLines + dataShape + axisLabels;
-  }
-
-  // Draw Category Sidebar tabs
-  function drawCategorySidebar() {
-    const list = document.getElementById('category-tabs-list');
+  // ── Category sidebar ───────────────────────────────
+  function buildSidebar() {
+    const wrap = document.getElementById('cat-tabs');
     let html = '';
-    
     AUDIT_DATA.categories.forEach(cat => {
-      const icon = CATEGORY_ICONS[cat.category] || '📁';
-      const scoreColor = getScoreColor(cat.score);
-      const count = cat.findings.length;
+      const icon  = CAT_ICONS[cat.category] || '▸';
+      const color = scoreColor(cat.score);
       const label = cat.category.charAt(0).toUpperCase() + cat.category.slice(1);
-
-      html += '<button class="cat-tab" id="tab-' + cat.category + '" data-cat="' + cat.category + '">'
-        + '<span class="cat-tab-title">'
-        + '<span class="cat-tab-icon">' + icon + '</span>'
-        + label
+      html += '<button class="cat-btn" id="tab-' + cat.category + '" data-cat="' + cat.category + '">'
+        + '<span class="cat-btn-left">'
+        + '<span class="cat-btn-icon">' + icon + '</span>'
+        + '<span class="cat-btn-name">' + label + '</span>'
         + '</span>'
-        + '<span class="cat-tab-meta">'
-        + (count > 0 ? '<span class="cat-tab-count">' + count + '</span>' : '')
-        + '<span class="cat-tab-score" style="color:' + scoreColor + '">' + cat.score + '</span>'
+        + '<span class="cat-btn-right">'
+        + (cat.findings.length ? '<span class="cat-count">' + cat.findings.length + '</span>' : '')
+        + '<span class="cat-score" style="color:' + color + '">' + cat.score + '</span>'
         + '</span>'
         + '</button>';
     });
-
-    list.innerHTML = html;
+    wrap.innerHTML = html;
   }
 
-  // Draw Agent Trace timeline if available
-  function drawAgentTrace() {
+  // Delegated handler for data-cat buttons
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-cat]');
+    if (btn) selectCategory(btn.dataset.cat);
+  });
+
+  // ── Agent trace ────────────────────────────────────
+  function buildTrace() {
     const container = document.getElementById('trace-container');
     if (!AUDIT_DATA.agentTrace) return;
-
-    const trace = AUDIT_DATA.agentTrace;
+    const trace   = AUDIT_DATA.agentTrace;
     const summary = trace.summary;
-    const stopColor = summary.stopReason === 'completed' ? 'var(--success)' : 'var(--critical)';
+    const stopCol = summary.stopReason === 'completed' ? 'var(--sev-success)' : 'var(--sev-critical)';
 
-    const toolUsageHtml = Object.entries(summary.toolUsage)
-      .sort((a,b) => b[1] - a[1])
-      .map(entry => '<span class="tool-chip"><code>' + escapeHtml(entry[0]) + '</code> · ' + entry[1] + '</span>')
-      .join('');
-
-    const timelineHtml = trace.calls.map((call, idx) => {
-      const isErr = call.isError;
-      const statusClass = isErr ? 'error' : 'success';
-      const displayDuration = call.durationMs < 1000 ? call.durationMs + 'ms' : (call.durationMs / 1000).toFixed(1) + 's';
-      const formattedInput = escapeHtml(JSON.stringify(call.input, null, 2));
-      const formattedOutput = escapeHtml(call.outputPreview);
-
-      return '<div class="timeline-item">'
-        + '<div class="timeline-node ' + statusClass + '"></div>'
-        + '<div class="timeline-title">'
-        + '<code>' + escapeHtml(call.name) + '</code>'
-        + '<span class="time">' + displayDuration + '</span>'
-        + '</div>'
-        + '<div class="timeline-body">'
-        + '<details>'
-        + '<summary>Arguments & Preview (' + (idx + 1) + '/' + trace.calls.length + ')</summary>'
-        + '<div style="margin-top:0.5rem;font-weight:600;color:var(--text-muted);font-size:0.7rem">ARGUMENTS</div>'
-        + '<pre style="margin-top:0.25rem;border-top:none;padding-top:0;color:#94a3b8">' + formattedInput + '</pre>'
-        + '<div style="margin-top:0.5rem;font-weight:600;color:var(--text-muted);font-size:0.7rem">OUTPUT PREVIEW</div>'
-        + '<pre>' + formattedOutput + '</pre>'
-        + '</details>'
-        + '</div>'
-        + '</div>';
+    const timelineHtml = trace.calls.map((call, i) => {
+      const cls = call.isError ? 'fail' : 'ok';
+      const dur = call.durationMs < 1000
+        ? call.durationMs + 'ms'
+        : (call.durationMs / 1000).toFixed(1) + 's';
+      return '<div class="tl-item">'
+        + '<div class="tl-dot ' + cls + '"></div>'
+        + '<div class="tl-title"><code>' + esc(call.name) + '</code>'
+        + '<span class="tl-dur">' + dur + '</span></div>'
+        + '<details class="tl-details"><summary style="cursor:pointer;font-size:11px;color:var(--text-3)">Args &amp; output (' + (i+1) + '/' + trace.calls.length + ')</summary>'
+        + '<pre style="margin-top:6px;font-size:11px;color:var(--text-3);white-space:pre-wrap;word-break:break-all">'
+        + esc(JSON.stringify(call.input,null,2))
+        + '\\n\\n--- OUTPUT ---\\n'
+        + esc(call.outputPreview)
+        + '</pre></details></div>';
     }).join('');
 
-    container.innerHTML = '<section class="trace-section">'
-      + '<div class="trace-header collapsed" id="trace-collapsible-header" onclick="toggleTrace()">'
-      + '<h2>'
-      + '<svg class="trace-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
-      + '<polyline points="6 9 12 15 18 9"/>'
-      + '</svg>'
-      + ' 🧭 Agentic Audit Trace'
-      + '</h2>'
-      + '<div class="trace-header-meta">'
-      + '<span>Model: <code>' + escapeHtml(trace.model) + '</code></span>'
-      + '<span>Turns: <strong>' + summary.turns + ' / ' + trace.maxTurns + '</strong></span>'
-      + '<span>Stop reason: <strong style="color:' + stopColor + '">' + escapeHtml(summary.stopReason) + '</strong></span>'
+    const toolChips = Object.entries(summary.toolUsage)
+      .sort((a,b) => b[1]-a[1])
+      .map(([n,c]) => '<span class="tool-chip"><code>' + esc(n) + '</code> · ' + c + '</span>')
+      .join('');
+
+    container.innerHTML = '<div class="trace-block" id="trace-block">'
+      + '<div class="trace-toggle" onclick="toggleTrace()">'
+      + '<div class="trace-toggle-left">'
+      + '<svg class="chevron" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>'
+      + '🧭 Agentic Audit Trace'
       + '</div>'
-      + '</div>'
-      + '<div class="trace-content" style="display:none" id="trace-collapsible-content">'
-      + '<table class="info-table" style="max-width:500px;margin-bottom:1rem">'
-      + '<tr><td>API Model Target</td><td><code>' + escapeHtml(trace.model) + '</code></td></tr>'
-      + '<tr><td>Total Token Expense</td><td>'
-      + '<strong>' + summary.inputTokens.toLocaleString() + '</strong> in · '
-      + '<strong>' + summary.outputTokens.toLocaleString() + '</strong> out · '
-      + '<strong>' + summary.cacheReadTokens.toLocaleString() + '</strong> cache read'
-      + '</td></tr>'
-      + (summary.stopDetail ? '<tr><td>Termination Detail</td><td><code style="color:var(--critical)">' + escapeHtml(summary.stopDetail) + '</code></td></tr>' : '')
-      + '</table>'
-      + '<div class="timeline">' + timelineHtml + '</div>'
-      + (toolUsageHtml ? '<div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border)">'
-        + '<div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:0.75rem;font-weight:700">Tool execution summary</div>'
-        + '<div class="tool-usage">' + toolUsageHtml + '</div>'
-        + '</div>' : '')
-      + '</div>'
-      + '</section>';
+      + '<div class="trace-toggle-right">'
+      + '<span>Model: <strong>' + esc(trace.model) + '</strong></span>'
+      + '<span>Turns: <strong>' + summary.turns + '/' + trace.maxTurns + '</strong></span>'
+      + '<span>Stop: <strong style="color:' + stopCol + '">' + esc(summary.stopReason) + '</strong></span>'
+      + '</div></div>'
+      + '<div class="trace-body">'
+      + '<div class="timeline" style="margin-bottom:12px">' + timelineHtml + '</div>'
+      + (toolChips ? '<div class="tool-chips">' + toolChips + '</div>' : '')
+      + '</div></div>';
   }
 
   function toggleTrace() {
-    const header = document.getElementById('trace-collapsible-header');
-    const content = document.getElementById('trace-collapsible-content');
-    if (header.classList.contains('collapsed')) {
-      header.classList.remove('collapsed');
-      content.style.display = 'block';
-    } else {
-      header.classList.add('collapsed');
-      content.style.display = 'none';
-    }
+    document.getElementById('trace-block').classList.toggle('open');
   }
 
-  // Findings filter & search
-  function getFilteredFindings() {
-    let findings = [];
-    
-    if (currentCategory === 'all') {
-      findings = AUDIT_DATA.allFindings;
-    } else {
-      const cat = AUDIT_DATA.categories.find(c => c.category === currentCategory);
-      findings = cat ? cat.findings : [];
+  // ── Filtering ──────────────────────────────────────
+  function getFindings() {
+    let items = CAT === 'all'
+      ? AUDIT_DATA.allFindings
+      : (AUDIT_DATA.categories.find(c => c.category === CAT) || {findings:[]}).findings;
+
+    if (SEV !== 'all') {
+      items = items.filter(f => {
+        if (SEV === 'low') return f.severity === 'low' || f.severity === 'info';
+        return f.severity === SEV;
+      });
     }
 
-    return findings.filter(f => {
-      // Severity check
-      if (currentSeverity !== 'all') {
-        const matches = {
-          critical: f.severity === 'critical',
-          high: f.severity === 'high',
-          medium: f.severity === 'medium',
-          low: f.severity === 'low' || f.severity === 'info'
-        };
-        if (!matches[currentSeverity]) return false;
-      }
-
-      // Search text check
-      if (searchText) {
-        const search = searchText.toLowerCase();
-        const inTitle = (f.title || '').toLowerCase().includes(search);
-        const inDesc = (f.description || '').toLowerCase().includes(search);
-        const inFile = (f.file || '').toLowerCase().includes(search);
-        const inFix = (f.fix || '').toLowerCase().includes(search);
-        return inTitle || inDesc || inFile || inFix;
-      }
-
-      return true;
-    });
+    if (QUERY) {
+      const q = QUERY.toLowerCase();
+      items = items.filter(f =>
+        (f.title||'').toLowerCase().includes(q) ||
+        (f.description||'').toLowerCase().includes(q) ||
+        (f.file||'').toLowerCase().includes(q) ||
+        (f.fix||'').toLowerCase().includes(q)
+      );
+    }
+    return items;
   }
 
-  function copyFix(index) {
-    const filtered = getFilteredFindings();
-    const finding = filtered[index];
-    if (!finding || !finding.fix) return;
-
-    navigator.clipboard.writeText(finding.fix).then(() => {
-      const btn = document.getElementById('copy-btn-' + index);
-      btn.innerText = 'Copied!';
-      btn.classList.add('copied');
-      setTimeout(() => {
-        btn.innerText = 'Copy Fix';
-        btn.classList.remove('copied');
-      }, 2000);
-    });
-  }
-
-  // Render Findings
   function renderFindings() {
-    const list = document.getElementById('findings-list-wrapper');
-    const filtered = getFilteredFindings();
+    const list    = document.getElementById('findings-list');
+    const items   = getFindings();
 
-    if (filtered.length === 0) {
-      list.innerHTML = '<div class="no-findings">'
-        + '<div class="no-findings-icon">🎉</div>'
-        + '<h3>No findings match your filter</h3>'
-        + '<p style="font-size:0.875rem;margin-top:0.25rem">Clear filters or try searching for another term.</p>'
-        + '</div>';
+    if (!items.length) {
+      list.innerHTML = '<div class="empty-state"><h3>No findings match your filter</h3><p>Clear filters or try a different search term.</p></div>';
       return;
     }
 
-    const html = filtered.map((f, index) => {
-      const color = SEVERITY_COLORS[f.severity] || 'var(--text-muted)';
-      const cleanDesc = escapeHtml(f.description);
-      const cleanTitle = escapeHtml(f.title);
-      const cleanFile = escapeHtml(f.file);
-      const cleanFix = escapeHtml(f.fix);
+    list.innerHTML = items.map((f, i) => {
+      const col  = SEV_COLORS[f.severity] || 'var(--sev-info)';
+      const file = esc(f.file || '');
+      const line = f.line ? ':' + f.line : '';
+      const fname = (f.file || '').split('/').pop();
 
       return '<div class="finding-card">'
-        + '<div class="finding-card-header">'
-        + '<div class="finding-title-row">'
-        + '<span class="finding-badge" style="background-color:' + color + '15;color:' + color + ';border:1px solid ' + color + '30">' + f.severity + '</span>'
-        + '<h3 class="finding-title">' + cleanTitle + '</h3>'
+        + '<div class="finding-card-top">'
+        + '<div class="finding-row1">'
+        + '<span class="sev-badge" style="background:' + col + '15;color:' + col + ';border:1px solid ' + col + '30">' + esc(f.severity) + '</span>'
+        + '<span class="finding-title">' + esc(f.title) + '</span>'
+        + '<span class="finding-id">' + esc(f.id) + '</span>'
         + '</div>'
-        + '<span style="font-size:0.75rem;font-weight:700;color:var(--text-muted)">' + f.id + '</span>'
+        + (f.file ? '<div class="finding-file">File: ' + file + line + '</div>' : '')
+        + '<div class="finding-desc">' + esc(f.description) + '</div>'
         + '</div>'
-        + (f.file ? '<div class="finding-meta">'
-          + '<span>File: <span class="finding-file-link">' + cleanFile + (f.line ? ':' + f.line : '') + '</span></span>'
+        + (f.snippet ? '<div class="code-block">'
+          + '<div class="code-block-hdr"><span>' + esc(fname) + (f.line?' (Line '+f.line+')':'') + '</span><code>Code Context</code></div>'
+          + '<div class="code-block-body"><pre>' + esc(f.snippet) + '</pre></div>'
           + '</div>' : '')
-        + '<p class="finding-desc">' + cleanDesc + '</p>'
-        + (f.snippet ? '<div class="code-panel">'
-          + '<div class="code-panel-header">'
-          + '<span>' + cleanFile.split('/').pop() + (f.line ? ' (Line ' + f.line + ')' : '') + '</span>'
-          + '<code>Code Context</code>'
+        + (f.fix ? '<div class="fix-block">'
+          + '<div class="fix-block-hdr">'
+          + '<span class="fix-label">✓ Proposed Fix</span>'
+          + '<button class="copy-btn" id="copy-btn-' + i + '" onclick="copyFix(' + i + ')">Copy Fix</button>'
           + '</div>'
-          + '<div class="code-panel-body">'
-          + '<pre><code>' + escapeHtml(f.snippet) + '</code></pre>'
-          + '</div>'
-          + '</div>' : '')
-        + (f.fix ? '<div class="fix-panel">'
-          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">'
-          + '<strong>'
-          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
-          + '<polyline points="20 6 9 17 4 12"/>'
-          + '</svg>'
-          + ' Proposed Fix'
-          + '</strong>'
-          + '<button class="copy-btn" id="copy-btn-' + index + '" onclick="copyFix(' + index + ')">Copy Fix</button>'
-          + '</div>'
-          + '<p style="color:var(--text-secondary);font-size:0.825rem">' + cleanFix + '</p>'
+          + '<p class="fix-text">' + esc(f.fix) + '</p>'
           + '</div>' : '')
         + '</div>';
     }).join('');
-
-    list.innerHTML = html;
   }
 
-  // Delegated click handler for dynamically-rendered category tabs
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('[data-cat]');
-    if (btn) { selectCategory(btn.dataset.cat); }
-  });
+  function copyFix(idx) {
+    const f = getFindings()[idx];
+    if (!f || !f.fix) return;
+    navigator.clipboard.writeText(f.fix).then(() => {
+      const btn = document.getElementById('copy-btn-' + idx);
+      if (!btn) return;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy Fix'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
 
-  // Interactive events
+  // ── Event handlers ─────────────────────────────────
   function selectCategory(cat) {
-    // Update active tab styles
-    document.querySelectorAll('.cat-tab').forEach(btn => btn.classList.remove('active'));
-    const target = document.getElementById('tab-' + cat);
-    if (target) target.classList.add('active');
-    
-    currentCategory = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    const tgt = document.getElementById('tab-' + cat);
+    if (tgt) tgt.classList.add('active');
+    CAT = cat;
     renderFindings();
   }
 
   function filterSeverity(sev) {
-    document.querySelectorAll('.sev-filter-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('sev-' + sev).classList.add('active');
-
-    currentSeverity = sev;
+    SEV = sev;
     renderFindings();
-  }
-
-  function filterBySeverity(sev) {
-    filterSeverity(sev);
-    const scrollTarget = document.querySelector('.explorer');
-    scrollTarget.scrollIntoView({ behavior: 'smooth' });
+    if (sev !== 'all') document.querySelector('.content-grid').scrollIntoView({behavior:'smooth'});
   }
 
   function handleSearch() {
-    searchText = document.getElementById('search-box').value;
+    QUERY = document.getElementById('search-box').value;
     renderFindings();
   }
 
-  // Document Ready Setup
+  // ── Boot ───────────────────────────────────────────
   window.addEventListener('DOMContentLoaded', () => {
     animateScore();
-    drawRadarChart();
-    drawCategorySidebar();
-    drawAgentTrace();
+    buildSidebar();
+    buildTrace();
     renderFindings();
   });
 </script>
