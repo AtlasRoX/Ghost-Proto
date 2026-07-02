@@ -1,1 +1,1 @@
-{"version":3,"file":"html.d.ts","sourceRoot":"","sources":["../../src/reporters/html.ts"],"names":[],"mappings":"AAKA,OAAO,KAAK,EAAE,WAAW,EAAqD,MAAM,eAAe,CAAC;AAmDpG,wBAAgB,kBAAkB,CAAC,MAAM,EAAE,WAAW,EAAE,UAAU,EAAE,MAAM,GAAG,IAAI,CAgNhF"}
+{"version":3,"file":"html.d.ts","sourceRoot":"","sources":["../../src/reporters/html.ts"],"names":[],"mappings":"AAKA,OAAO,KAAK,EAAE,WAAW,EAAE,MAAM,eAAe,CAAC;AAYjD,wBAAgB,kBAAkB,CAAC,MAAM,EAAE,WAAW,EAAE,UAAU,EAAE,MAAM,GAAG,IAAI,CAsxChF"}
