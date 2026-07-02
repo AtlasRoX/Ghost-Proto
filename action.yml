@@ -20,7 +20,7 @@ inputs:
   model:
     description: 'Proto model to use (0.3, 0.2, 0.1)'
     required: false
-    default: '0.3'
+    default: '0.2'
   output:
     description: 'Output formats (terminal,markdown,html,json)'
     required: false

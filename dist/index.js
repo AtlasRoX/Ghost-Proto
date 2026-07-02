@@ -48,7 +48,7 @@ async function main() {
         .option('-k, --api-key <key>', 'Proto API key (or set GHOSTPROTO_API_KEY env var)')
         .option('-o, --output <formats>', 'Output formats: terminal,markdown,html,json (comma-separated)', 'terminal,markdown,html')
         .option('-c, --categories <cats>', 'Audit only specific categories (security,quality,performance,architecture,dependencies,testing,documentation)')
-        .option('-m, --model <model>', 'Proto model to use (0.3, 0.2, 0.1)', '0.3')
+        .option('-m, --model <model>', 'Proto model to use (0.3, 0.2, 0.1)', '0.2')
         .option('--max-files <n>', 'Maximum files to scan', '500')
         .option('--max-file-size <kb>', 'Maximum file size in KB to include', '100')
         .option('--static', 'Run static analysis only (no AI)')
@@ -92,7 +92,7 @@ Examples:
             apiKey: resolvedApiKey,
             output: outputFormats,
             categories,
-            model: opts['model'] ?? '0.3',
+            model: opts['model'] ?? '0.2',
             maxFiles: parseInt(opts['maxFiles']) || 500,
             maxFileSize: parseInt(opts['maxFileSize']) || 100,
             noAi: !!opts['static'],
