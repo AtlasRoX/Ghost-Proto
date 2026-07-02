@@ -1,0 +1,1 @@
+{"version":3,"file":"variable.d.ts","sourceRoot":"","sources":["../../../../../src/core/compiler/analysis/trace/variable.ts"],"names":[],"mappings":"AAAA,OAAO,EAAkB,YAAY,EAAE,MAAM,eAAe,CAAC;AAE7D,qBAAa,cAAc;WACX,aAAa,CAAC,UAAU,EAAE,MAAM,EAAE,EAAE,SAAS,EAAE,MAAM,GAAG,YAAY,EAAE;CASrF"}

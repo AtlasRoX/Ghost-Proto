@@ -1,0 +1,32 @@
+{
+  "productName": "GhostProto Studio",
+  "version": "0.2.2",
+  "identifier": "com.ghostproto.studio",
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
+    "devUrl": "http://localhost:8080",
+    "frontendDist": "../"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "GhostProto Studio",
+        "width": 1280,
+        "height": 768,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.ico"
+    ]
+  }
+}

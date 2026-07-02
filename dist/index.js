@@ -18,6 +18,7 @@ const markdown_1 = require("./reporters/markdown");
 const html_1 = require("./reporters/html");
 const json_1 = require("./reporters/json");
 const agent_log_1 = require("./reporters/agent-log");
+const interactive_1 = require("./reporters/interactive");
 const config_1 = require("./core/config");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version: VERSION } = require('../package.json');
@@ -42,6 +43,65 @@ async function main() {
             process.exit(1);
         }
     });
+    // Config subcommand structure
+    const configCmd = program
+        .command('config')
+        .description('Manage configuration settings (get, set, show)');
+    configCmd
+        .command('set <key> <value>')
+        .description('Set config key-value pair')
+        .action((key, value) => {
+        try {
+            const config = (0, config_1.loadConfig)();
+            config[key] = value;
+            (0, config_1.saveConfig)(config);
+            console.log(chalk_1.default.green(`Successfully set config ${key} = ${value}`));
+            process.exit(0);
+        }
+        catch (err) {
+            console.error(chalk_1.default.red(`Error setting config: ${err.message}`));
+            process.exit(1);
+        }
+    });
+    configCmd
+        .command('get <key>')
+        .description('Get config value by key')
+        .action((key) => {
+        try {
+            const config = (0, config_1.loadConfig)();
+            const value = config[key];
+            if (value !== undefined) {
+                console.log(value);
+            }
+            else {
+                console.log(chalk_1.default.yellow(`Config key "${key}" is not set.`));
+            }
+            process.exit(0);
+        }
+        catch (err) {
+            console.error(chalk_1.default.red(`Error getting config: ${err.message}`));
+            process.exit(1);
+        }
+    });
+    configCmd
+        .command('show')
+        .description('Show entire configuration')
+        .action(() => {
+        try {
+            const config = (0, config_1.loadConfig)();
+            console.log(chalk_1.default.hex('#4ee6d3').bold('\n  Current Configuration:'));
+            console.log(chalk_1.default.gray(`  Path: ${(0, config_1.getConfigPath)()}\n`));
+            for (const [k, v] of Object.entries(config)) {
+                console.log(`  ${chalk_1.default.hex('#2dbfad')(k.padEnd(12))} : ${chalk_1.default.white(v)}`);
+            }
+            console.log();
+            process.exit(0);
+        }
+        catch (err) {
+            console.error(chalk_1.default.red(`Error loading config: ${err.message}`));
+            process.exit(1);
+        }
+    });
     // Main audit options
     program
         .argument('[path]', 'Path to the project to audit', '.')
@@ -53,6 +113,7 @@ async function main() {
         .option('--max-file-size <kb>', 'Maximum file size in KB to include', '100')
         .option('--static', 'Run static analysis only (no AI)')
         .option('--fast', 'Use one-shot AI mode (no agentic loop). Faster & cheaper but shallower.', false)
+        .option('-i, --interactive', 'Run interactive terminal dashboard', false)
         .option('--max-turns <n>', 'Max tool-use iterations for agentic mode', '25')
         .option('--max-budget <tokens>', 'Hard ceiling on total tokens (input+output) per agentic audit', '500000')
         .option('--no-trace', 'Do not write agent-trace.jsonl (trace is on by default in agentic mode)')
@@ -171,20 +232,17 @@ Examples:
             if (needsFileOutput) {
                 fs_1.default.mkdirSync(reportDir, { recursive: true });
             }
-            if (outputFormats.includes('terminal') && !opts['json']) {
-                (0, terminal_1.printReport)(report);
-            }
             if (outputFormats.includes('markdown')) {
                 const mdPath = path_1.default.join(reportDir, 'audit-report.md');
                 (0, markdown_1.generateMarkdownReport)(report, mdPath);
-                if (!opts['json'] && !options.quiet) {
+                if (!opts['json'] && !options.quiet && !opts['interactive']) {
                     console.log(chalk_1.default.gray(`  📄 Markdown report → file:///${path_1.default.resolve(mdPath).replace(/\\/g, '/')}`));
                 }
             }
             if (outputFormats.includes('html')) {
                 const htmlPath = path_1.default.join(reportDir, 'audit-report.html');
                 (0, html_1.generateHtmlReport)(report, htmlPath);
-                if (!opts['json'] && !options.quiet) {
+                if (!opts['json'] && !options.quiet && !opts['interactive']) {
                     console.log(chalk_1.default.gray(`  🌐 HTML report    → file:///${path_1.default.resolve(htmlPath).replace(/\\/g, '/')}`));
                 }
             }
@@ -195,10 +253,18 @@ Examples:
                 else {
                     const jsonPath = path_1.default.join(reportDir, 'audit-report.json');
                     (0, json_1.generateJsonReport)(report, jsonPath);
-                    if (!options.quiet) {
+                    if (!options.quiet && !opts['interactive']) {
                         console.log(chalk_1.default.gray(`  📦 JSON report    → file:///${path_1.default.resolve(jsonPath).replace(/\\/g, '/')}`));
                     }
                 }
+            }
+            if (opts['interactive']) {
+                const interactiveReporter = new interactive_1.InteractiveReporter(report);
+                interactiveReporter.start();
+                return;
+            }
+            if (outputFormats.includes('terminal') && !opts['json']) {
+                (0, terminal_1.printReport)(report);
             }
             // Exit code: 1 if critical issues found (useful for CI/CD)
             if (report.criticalCount > 0) {

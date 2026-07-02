@@ -1,0 +1,11 @@
+{
+  "identifier": "default",
+  "description": "Default permissions for GhostProto Studio",
+  "windows": ["main"],
+  "permissions": [
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:app:default"
+  ]
+}

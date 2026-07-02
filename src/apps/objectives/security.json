@@ -1,0 +1,11 @@
+{
+  "id": "security",
+  "category": "Security",
+  "description": "Audit project endpoints for SQL injection and security leaks",
+  "requiredCapabilities": ["high_reasoning"],
+  "rulePacks": ["GHOST_SQL_INJECTION"],
+  "retrievalStrategy": "deep",
+  "promptProfile": "security-audit",
+  "consensusPolicy": "unanimous",
+  "maxCostLimit": 1.0
+}

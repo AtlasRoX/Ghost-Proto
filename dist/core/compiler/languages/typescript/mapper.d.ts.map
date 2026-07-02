@@ -1,0 +1,1 @@
+{"version":3,"file":"mapper.d.ts","sourceRoot":"","sources":["../../../../../src/core/compiler/languages/typescript/mapper.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,MAAM,UAAU,CAAC;AACxC,OAAO,EAAE,MAAM,EAAY,MAAM,oBAAoB,CAAC;AAItD,qBAAa,gBAAgB;IAC3B,OAAO,CAAC,MAAM,CAIZ;IAEK,GAAG,CAAC,IAAI,EAAE,YAAY,EAAE,IAAI,EAAE,MAAM,GAAG,MAAM,EAAE;CA6DvD"}

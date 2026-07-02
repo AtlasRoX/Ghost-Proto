@@ -1,0 +1,1 @@
+{"version":3,"file":"call.d.ts","sourceRoot":"","sources":["../../../../../src/core/compiler/analysis/graph/call.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,iBAAiB,EAAE,MAAM,0BAA0B,CAAC;AAE7D,MAAM,WAAW,aAAa;IAC5B,SAAS,EAAE,MAAM,CAAC;IAClB,SAAS,EAAE,MAAM,CAAC;CACnB;AAED,qBAAa,gBAAgB;WACb,KAAK,CAAC,OAAO,EAAE,iBAAiB,GAAG,aAAa,EAAE;CAwBjE"}

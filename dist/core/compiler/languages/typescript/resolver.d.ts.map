@@ -1,0 +1,1 @@
+{"version":3,"file":"resolver.d.ts","sourceRoot":"","sources":["../../../../../src/core/compiler/languages/typescript/resolver.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,eAAe,EAAE,MAAM,eAAe,CAAC;AAChD,OAAO,EAAE,MAAM,EAAY,MAAM,oBAAoB,CAAC;AAGtD,qBAAa,kBAAkB;IAC7B,OAAO,CAAC,QAAQ,CAA4B;IAErC,cAAc,CAAC,GAAG,EAAE,eAAe,EAAE,EAAE,EAAE,MAAM,EAAE,EAAE,IAAI,EAAE,MAAM,GAAG,IAAI;CAc9E"}

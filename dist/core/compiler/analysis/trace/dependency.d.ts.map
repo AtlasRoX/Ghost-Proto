@@ -1,0 +1,1 @@
+{"version":3,"file":"dependency.d.ts","sourceRoot":"","sources":["../../../../../src/core/compiler/analysis/trace/dependency.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,iBAAiB,EAAE,MAAM,0BAA0B,CAAC;AAE7D,qBAAa,gBAAgB;IACf,OAAO,CAAC,IAAI;gBAAJ,IAAI,EAAE,iBAAiB;IAEpC,oBAAoB,CAAC,QAAQ,EAAE,MAAM,EAAE,MAAM,EAAE,MAAM,GAAG,MAAM,EAAE,GAAG,IAAI;CAoC/E"}

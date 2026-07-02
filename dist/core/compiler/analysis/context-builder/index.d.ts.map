@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../../src/core/compiler/analysis/context-builder/index.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,oBAAoB,EAAE,MAAM,uBAAuB,CAAC;AAE7D,OAAO,EAAE,aAAa,EAAE,cAAc,EAAE,MAAM,UAAU,CAAC;AAGzD,qBAAa,cAAc;WACX,YAAY,CACxB,QAAQ,EAAE,oBAAoB,EAC9B,MAAM,EAAE,aAAa,EACrB,UAAU,CAAC,EAAE,MAAM,GAClB,cAAc;CAqClB"}

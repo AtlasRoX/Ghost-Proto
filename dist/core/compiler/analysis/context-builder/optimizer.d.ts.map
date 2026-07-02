@@ -1,0 +1,1 @@
+{"version":3,"file":"optimizer.d.ts","sourceRoot":"","sources":["../../../../../src/core/compiler/analysis/context-builder/optimizer.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,MAAM,SAAS,CAAC;AACvC,OAAO,EAAE,aAAa,EAAE,cAAc,EAAE,MAAM,UAAU,CAAC;AAEzD,qBAAa,gBAAgB;WACb,QAAQ,CAAC,KAAK,EAAE,YAAY,EAAE,MAAM,EAAE,aAAa,GAAG,cAAc;CAgBnF"}

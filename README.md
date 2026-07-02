@@ -6,7 +6,6 @@
 
 *One command. Complete audit. Powered by Proto Engine.*
 
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square)](https://nodejs.org)
 [![Powered by Proto Engine](https://img.shields.io/badge/Powered%20by-Proto%20Engine-green?style=flat-square)](https://github.com/AtlasRoX/Ghost-Proto)
@@ -17,365 +16,241 @@
 
 ## What is GhostProto?
 
-**GhostProto** is a zero-config, AI-powered codebase auditor that runs like `npx ghostproto` (or `ghostch` globally) and gives you the kind of comprehensive audit report that would cost thousands from a consulting firm.
+**GhostProto** is a zero-config, AI-powered codebase auditor that runs via `npx ghostproto` (or globally as `ghostch`) to generate comprehensive, professional-grade codebase audit reports.
 
-It combines **static analysis** (fast, no API key needed), **one-shot AI review**, and a true **agentic audit loop** where GhostProto actively investigates your codebase — reading files, searching for patterns, and verifying every finding with evidence — across 7 dimensions:
-
-| Category | What It Checks |
-|----------|---------------|
-| 🔒 **Security** | Hardcoded secrets, SQL injection, XSS, vulnerable auth patterns, OWASP Top 10 |
-| 📊 **Code Quality** | Complexity, duplication, naming, dead code, anti-patterns |
-| ⚡ **Performance** | N+1 queries, memory leaks, inefficient algorithms, blocking I/O |
-| 🏗️ **Architecture** | Modularity, separation of concerns, coupling, scalability |
-| 📦 **Dependencies** | Known CVEs, deprecated packages, bloat, supply chain risks |
-| 🧪 **Testing** | Coverage gaps, missing tests, test quality, flaky patterns |
-| 📚 **Documentation** | Missing docs, stale comments, API documentation gaps |
+It bridges the gap between deterministic compiler analysis (ASTs, call graphs, taint analysis) and probabilistic AI reasoning. GhostProto combines fast static analysis with a multi-agentic review loop that executes tools, traces control flow, validates hypotheses, and verifies findings with concrete evidence.
 
 ---
 
-## Quick Start
+## Key Features & Audit Dimensions
 
-### Installation & Execution
+GhostProto audits your codebase across **7 core dimensions**:
 
-#### 1. One-click Installer (Windows PowerShell)
-You can install and setup `ghostch` globally with:
-```powershell
-iwr -useb https://raw.githubusercontent.com/AtlasRoX/Ghost-Proto/main/install.ps1 | iex
+| Category | Description & Verifications |
+|:---|:---|
+| 🔒 **Security** | Hardcoded secrets, SQL injection, XSS vulnerabilities, unsafe cryptographic functions, authentication flow flaws. |
+| ✨ **Code Quality** | Deep nesting, cyclomatic complexity spikes, code duplication, dead code, and naming anti-patterns. |
+| ⚡ **Performance** | N+1 query patterns, synchronous blocking I/O, potential memory leaks, and inefficient algorithms. |
+| 🏗️ **Architecture** | Modularity violations, separation of concerns, high coupling, circular dependencies, and scalability. |
+| 📦 **Dependencies** | Outdated or deprecated packages, known CVE vulnerabilities, dependency bloat, and license risks. |
+| 🧪 **Testing** | Coverage gaps, missing test boundaries, flaky test patterns, and low test assertions quality. |
+| 📝 **Documentation** | API endpoint documentation gaps, missing JSDoc/docstrings, and stale code comments. |
+
+---
+
+## System Architecture
+
+GhostProto consists of two major components: the **Analysis & Compiler Pipeline** (the core engine) and **GhostProto Studio** (the desktop-grade UI client).
+
+### 1. Analysis & Compiler Pipeline
+This pipeline processes files, generates AST structures, compiles code into a language-neutral intermediate representation (Ghost IR), and coordinates the multi-agent reasoning loop.
+
+```mermaid
+flowchart TD
+    %% Style & Classes
+    classDef Ingest fill:#1a1c1e,stroke:#3b82f6,stroke-width:2px,color:#e2e8f0;
+    classDef Static fill:#1a1c1e,stroke:#eab308,stroke-width:1.5px,color:#e2e8f0;
+    classDef Compile fill:#1a1c1e,stroke:#22c55e,stroke-width:2px,color:#e2e8f0;
+    classDef Agentic fill:#1a1c1e,stroke:#ec4899,stroke-width:2px,color:#e2e8f0;
+    classDef Report fill:#1a1c1e,stroke:#6366f1,stroke-width:1.5px,color:#e2e8f0;
+
+    subgraph INGESTION["1. Repository Ingestion"]
+        A[Target Codebase] --> B[File Scanner]
+        B --> C[Ignore Checker]
+        C --> D[Language & Framework Ingest]
+    end
+    class INGESTION Ingest;
+
+    subgraph STATIC["2. Static Rule Engine"]
+        D --> E[Secrets Scanner]
+        D --> F[Dependency Vuln DB]
+        D --> G[Complexity Analyzer]
+        E & F & G --> H[Observations Stream]
+    end
+    class STATIC Static;
+
+    subgraph COMPILER["3. Ghost IR Compiler Pipeline"]
+        D --> I[Tree-sitter Parser]
+        I --> J[Concrete AST]
+        J --> K[Ghost IR Compiler]
+        K --> L[Compiler Pass Manager]
+        L --> M[Passes: Imports, Scopes, DCE]
+        M --> N[Ghost IR Validator Tiers 1-4]
+        N --> O[Serialized Symbol Index & Graph]
+    end
+    class COMPILER Compile;
+
+    subgraph AGENTIC_LOOP["4. Goal-Driven Agentic Audit Loop"]
+        O & H --> P[Agent Goal Planner]
+        P --> Q[Priority Scheduler]
+        Q --> R[Parallel Worker Pool]
+        R --> S[LLM Capability Router]
+        S --> T[Layered Memory Blackboard]
+        T --> U[Agent Consensus Judge]
+        U --> V[Verified Findings]
+    end
+    class AGENTIC_LOOP Agentic;
+
+    subgraph REPORTING["5. Multi-Format Report Generator"]
+        V --> W[Reporters Engine]
+        W --> X[Terminal Output]
+        W --> Y[audit-report.md / .html / .json]
+        W --> Z[agent-trace.jsonl]
+        W --> Studio[GhostProto Studio Desktop GUI]
+    end
+    class REPORTING Report;
 ```
-Then anywhere you just type `ghostch` to open the tool:
-```bash
-ghostch
-```
 
-#### 2. Run with npx (Zero Install)
-```bash
-# Set your Proto API key and run
-GHOSTPROTO_API_KEY=nvapi-... npx ghostproto
-```
+### 2. GhostProto Studio (Workbench Architecture)
+The desktop application GUI encapsulates the engine's core SDK behind a modular workbench environment communicating via Tauri IPC.
 
-#### 3. Command Usage Examples
+```mermaid
+flowchart TD
+    classDef StudioCore fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef Service fill:#1e293b,stroke:#f59e0b,stroke-width:1.5px,color:#f8fafc;
+    classDef Extension fill:#1e293b,stroke:#10b981,stroke-width:1.5px,color:#f8fafc;
+    classDef Backend fill:#0f172a,stroke:#ec4899,stroke-width:2px,color:#f8fafc;
 
-```bash
-# Static only — no API key required
-ghostch --static
+    subgraph WINDOW_SHELL["Tauri Native Client"]
+        A["Studio Desktop Window (React + Tailwind)"]
+    end
+    class WINDOW_SHELL StudioCore;
 
-# Specific project path
-ghostch ./path/to/project
+    subgraph WORKBENCH["Studio Workbench Controller"]
+        B[Window Docking Manager]
+        C[Layout Grid Manager]
+        D[Command Palette Service]
+    end
+    class WORKBENCH StudioCore;
 
-# Save API key globally in ~/.ghostproto.json
-ghostch key nvapi-xxxxxx
+    subgraph SERVICES["Shared Core Services"]
+        E[SelectionService]
+        F[WorkspaceService]
+        G[TimelineService]
+        H[InspectorService]
+    end
+    class SERVICES Service;
 
-# One-shot AI mode — cheaper & faster, shallower than agentic
-ghostch --fast
+    subgraph EXTENSIONS["Feature Extensions (Views & Panels)"]
+        I[Repository Explorer]
+        J[CFG Graph Visualizer]
+        K[AI Fix Workbench]
+        L[Audit Timeline Inspector]
+        M[Consensus Dashboard]
+    end
+    class EXTENSIONS Extension;
 
-# Control the agent budget
-ghostch --max-turns 40 --max-budget 1000000
+    subgraph ENGINE["Core Engine SDK"]
+        N[Tauri IPC Bridge]
+        O[Compiler Context]
+        P[Multi-Agent Runner]
+    end
+    class ENGINE Backend;
 
-# Output to HTML + Markdown reports
-ghostch --output terminal,html,markdown
-
-# CI/CD mode — JSON output, exits 1 on critical issues
-ghostch --json
+    A --> B & C
+    B & C --> E & F & G & H
+    E & F & G & H <--> I & J & K & L & M
+    I & J & K & L & M <--> N
+    N <--> O & P
 ```
 
 ---
 
-## Global Installation
+## Three Analysis Modes
 
+Depending on requirements, GhostProto can be executed in three modes:
+
+| Mode | Command Flag | Execution Details |
+|:---|:---|:---|
+| **Static Mode** | `--static` | Runs completely offline with no LLM dependency. Evaluates AST-pattern rules, dependency files, and code complexity metrics. |
+| **One-shot AI Mode** | `--fast` | Fast and cost-efficient. Sends a compressed code digest to the Proto Engine for a single-pass AI review. |
+| **Agentic Mode** | *(Default when API key set)* | Spin up a multi-agent loop. The agents analyze findings, formulate security hypotheses, call file tools, explore code structures, and verify issues before outputting them. |
+
+---
+
+## Installation & Setup
+
+### Requirements
+- **Node.js** >= 18.0.0
+- **npm** >= 8.0.0
+- **Git** installed on the local system path
+
+### 1. Global Installation (NPM)
+Install the package globally via npm:
 ```bash
-# Global npm install
 npm install -g ghostproto
-
-# Then use anywhere
-ghostch
-ghostch ./my-project
 ```
 
----
-
-## Example Output
-
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                                                                              ║
-║   ██████╗ ██╗  ██╗ ██████╗  ██████╗████████╗    ██████╗ ██████╗  ██████╗     ║
-║   ██╔════╝ ██║  ██║██╔═══██╗██╔════╝╚══██╔══╝    ██╔══██╗██╔══██╗██╔═══██╗    ║
-║   ██║  ███╗███████║██║   ██║╚█████╗    ██║       ██████╔╝██████╔╝██║   ██║    ║
-║   ██║   ██║██╔══██║██║   ██║ ╚═══██╗   ██║       ██╔═══╝ ██╔══██╗██║   ██║    ║
-║   ╚██████╔╝██║  ██║╚██████╔╝██████╔╝   ██║       ██║     ██║  ██║╚██████╔╝    ║
-║    ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═════╝    ╚═╝       ╚═╝     ╚═╝  ╚═╝ ╚═════╝     ║
-║                                                                              ║
-║   AI Auditor powered by Proto Engine  ·  v0.2.2                              ║
-║   github.com/AtlasRoX/Ghost-Proto                                            ║
-║                                                                              ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-
-╭─────────────────────────────── AUDIT REPORT ─────────────────────────────────╮
-│  Project: my-saas-app                                                        │
-│  Path:    /Users/dev/my-saas-app                                             │
-│  Scanned: 247 files · 18,432 lines                                           │
-│  Stack:   TypeScript, Python                                                 │
-│  Frameworks: React, FastAPI, Prisma                                          │
-│                                                                              │
-│  ┌────────────────────────────────────┐                                     │
-│  │   OVERALL SCORE: 64/100  Grade: C  │                                     │
-│  └────────────────────────────────────┘                                     │
-│                                                                              │
-│  ✦ AI-Powered Analysis (Proto Engine)  ·  Duration: 12.4s                    │
-╰──────────────────────────────────────────────────────────────────────────────╯
-
- CATEGORY SCORES
-
-  🔒  Security        ██████░░░░░░░░░░░░░░  42/100  [ D ]  · 3 issues
-  📊  Code Quality    ████████████░░░░░░░░  71/100  [ C ]  · 5 issues
-  ⚡  Performance     █████████████░░░░░░░  78/100  [ C ]  · 2 issues
-  🏗️   Architecture    ██████████░░░░░░░░░░  60/100  [ D ]  · 4 issues
-  📦  Dependencies    ████████░░░░░░░░░░░░  55/100  [ F ]  · 7 issues
-  🧪  Testing         ████████░░░░░░░░░░░░  40/100  [ F ]  · 2 issues
-  📚  Documentation   ████████████░░░░░░░░  72/100  [ C ]  · 1 issue
-
- FINDINGS SUMMARY
-
-  🔴 Critical: 2      🟠 High: 4      🟡 Medium: 8      🔵 Low: 10
-
-
-  🚨   CRITICAL   CRITICAL ISSUES (2)
-  ──────────────────────────────────────────────────────────────────────
-
-    🔒 Hardcoded JWT Secret
-    Potential Hardcoded JWT Secret found in source code.
-    File: src/config/auth.ts:14
-    Code: jwt_secret = "super-secret-key-dont-tell"
-    Fix:  Use a randomly generated 256-bit secret stored in environment variables.
-
-    📦 Vulnerable Dependency: axios
-    axios@0.21.0 — SSRF vulnerability in versions < 0.21.2
-    Fix:  Upgrade to axios@0.21.2 or later
+### 2. Windows PowerShell (One-Click Installer)
+Run this command in an elevated PowerShell terminal to automatically verify dependencies, fetch the project source, and install the `ghostch` CLI globally:
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/AtlasRoX/Ghost-Proto/main/install.ps1'))
 ```
 
----
-
-## Features
-
-### 🤖 Three Analysis Modes
-| Mode | Flag | When to use |
-|------|------|-------------|
-| **Static** | `--static` | No API key, offline, CI pre-checks. Regex + AST rules. |
-| **One-shot AI** | `--fast` | Cheap & fast Proto Engine review of a files digest. |
-| **Agentic** *(default when API key is set)* | *(default)* | GhostProto actively investigates via tools — reads files, runs searches, verifies every finding with evidence. Deepest signal, highest accuracy. |
-
-### 🧭 Agentic Audit — How it works
-When an API key is available, GhostProto runs a **manual agentic loop**: the agent is given a read-only, sandboxed tool set and orchestrates its own investigation.
-
-**Tools GhostProto has access to:**
-- `get_project_summary` — languages, frameworks, test setup
-- `get_static_findings` — deterministic findings to build on (never duplicate)
-- `read_dependency_manifest` — `package.json`, `requirements.txt`, etc.
-- `list_files` — glob-based discovery
-- `search_code` — literal or regex search across the repo
-- `read_file` — line-range reads with numbered output
-- `finalize_audit` — structured submission of findings
-
-**Production guardrails (all enabled by default):**
-- 🛡️ **Path sandboxing** — every file access is resolved against the project root; traversal (`..`), absolute-path escape, and null-byte smuggling are rejected
-- 🔒 **Read-only by construction** — no tool can write, spawn shells, or hit the network
-- 🔁 **Repetition circuit breaker** — same tool call 3× in the last 6 calls aborts the loop before it wastes budget
-- 🎯 **Iteration cap** — hard ceiling of 25 tool-use turns (configurable via `--max-turns`)
-- 💰 **Token budget** — 500k-token hard ceiling per audit (configurable via `--max-budget`)
-- ⏱️ **Per-turn streaming** — no SDK HTTP timeouts on long reasoning turns
-- 🧯 **Errors as results** — tool failures are returned to the agent as recoverable results; the loop never crashes
-- 📏 **Result size caps** — 16 KB per tool result, 200 KB per file read (agent is told to use ranges)
-- ⏳ **Budget-aware nudges** — at 70% of the budget the agent is reminded to finalise instead of over-exploring
-- 🧭 **Full audit trail** — every tool call is recorded to `.ghostproto/agent-trace.jsonl` (turn, input, output preview, duration, error flag). Disable with `--no-trace`.
-- 📺 **Live streaming tree view** — the CLI prints each turn and tool call as it happens (no more opaque spinner); add `-V / --verbose` for per-turn token spend, tool durations, and result previews.
-
-**Why an agentic audit beats a one-shot one:**
-| | One-shot (`--fast`) | Agentic *(default)* |
-|---|---|---|
-| Evidence quality | Limited to file digest sent in the prompt | Agent reads actual files, line-by-line, and verifies each finding |
-| Cross-file insight | Hard — small context window | Native — Agent pulls what it needs |
-| False positives | Higher (inference from partial view) | Lower (must cite file:line + snippet) |
-| Cost | Lower, bounded | Higher but **capped** via `--max-budget` |
-| Latency | Single API call | Multiple turns (still ~1-3 min typical) |
-
-### 📄 Multiple Output Formats
-| Format | Flag | Description |
-|--------|------|-------------|
-| Terminal | `--output terminal` | Beautiful colored output (default) |
-| Markdown | `--output markdown` | Saves `audit-report.md` under `.ghostproto/` |
-| HTML | `--output html` | Beautiful standalone HTML report under `.ghostproto/` |
-| JSON | `--output json` | Machine-readable, perfect for CI/CD |
-
-### 🔧 Highly Configurable
+### 3. Local Development Setup
+To build the application locally from source:
 ```bash
-# Static analysis only (no AI, no API key)
+# Clone the repository
+git clone https://github.com/AtlasRoX/Ghost-Proto.git
+cd Ghost-Proto
+
+# Install packages
+npm install
+
+# Compile TypeScript
+npm run build
+```
+
+---
+
+## Usage Guide
+
+Run audits on your current directory or target project path:
+
+### Standard CLI Audits
+```bash
+# Zero-Install audit (defaulting to agentic mode if API key is in environment)
+GHOSTPROTO_API_KEY=your_api_key_here npx ghostproto
+
+# Fast one-shot AI review on a specific project directory
+ghostch --fast ./my-project-path
+
+# Pure static analysis (does not require API key)
 ghostch --static
-
-# One-shot AI mode (no agentic loop, cheaper)
-ghostch --fast
-
-# Specific categories only
-ghostch --categories security,dependencies
-
-# Control scope
-ghostch --max-files 1000 --max-file-size 200
-
-# Tune the agent
-ghostch --max-turns 40 --max-budget 1000000
-ghostch --no-trace          # skip agent-trace.jsonl
-
-# Use fallback Proto models
-ghostch --model 0.2
-ghostch --model 0.1
 ```
 
----
-
-## Model Hierarchy
-
-GhostProto supports the following models from Proto Engine:
-1. **Primary (Default)**: `0.3` — Best for detailed reasoning and code investigation (under the hood uses `nvidia/nemotron-3-ultra-550b-a55b`).
-2. **Secondary**: `0.2` — Balanced fallback model (under the hood uses `nvidia/nemotron-3-super-120b-a12b`).
-3. **Tertiary**: `0.1` — Fastest fallback option (under the hood uses `nvidia/llama-3.3-nemotron-super-49b-v1`).
-
----
-
-## ⚙️ CI/CD Integration
-
-### GitHub Action
-```yaml
-- name: GhostProto Audit
-  uses: AtlasRoX/Ghost-Proto@v0
-  with:
-    api-key: ${{ secrets.GHOSTPROTO_API_KEY }}  # optional
-    fail-on-critical: true
-```
-
-The action outputs `score`, `grade`, `critical-count`, and `report-json` for downstream steps, and writes a summary table to your PR summary.
-
-### Manual npx usage in CI
-```yaml
-- name: Run GhostProto
-  run: npx ghostproto --json > audit.json
-  env:
-    GHOSTPROTO_API_KEY: ${{ secrets.GHOSTPROTO_API_KEY }}
-```
-
-### Pre-commit hook
+### Interactive Terminal Dashboard
+Launch the interactive CLI dashboard using the `-i` / `--interactive` flag:
 ```bash
-#!/bin/sh
-npx ghostproto --static --quiet --json | \
-  node -e "const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); process.exit(r.criticalCount > 0 ? 1 : 0)"
+ghostch -i ./my-saas-app
 ```
 
----
+### Configuration Management
+Store your API key globally or view configuration flags using the `config` subcommand:
+```bash
+# Set your API key globally
+ghostch config set apiKey nvapi-xxxxxxxxxxxxxxxx
 
-## What Gets Audited
+# Set the default LLM model
+ghostch config set model 0.3
 
-### 🔒 Security
-- Hardcoded API keys, secrets, passwords, tokens
-- AWS/GitHub/Proto/OpenAI credentials in source
-- SQL injection patterns (string concatenation in queries)
-- `eval()` usage, dangerous `innerHTML` patterns
-- Disabled SSL/TLS verification
-- Command injection via `subprocess(shell=True)`
-- Insecure cryptographic functions (`Math.random()` for security)
-- JWT secret exposure
-- Database connection strings with credentials
-
-### 📦 Dependencies
-- Packages with known CVEs (lodash, axios, minimist, etc.)
-- Deprecated/unmaintained packages (moment, request)
-- Excessive dependency count
-- Missing lock files
-
-### 📊 Code Quality
-- Files > 500 lines (consider splitting)
-- Deep nesting (>5 levels)
-- Excessive `console.log` usage
-- Duplicate imports
-- Missing documentation on large files
-- Test coverage ratio
-
----
-
-## How It Works
-
-```
-Your Codebase
-     │
-     ▼
-┌─────────────────────────────────┐
-│         File Scanner            │
-│  • Respects .gitignore          │
-│  • Detects languages/frameworks │
-│  • Reads source files           │
-└─────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────┐
-│       Static Analyzers          │
-│  • Secret detection (20+ rules) │
-│  • Dependency vulnerability DB  │
-│  • Complexity & quality checks  │
-└─────────────────────────────────┘
-     │
-     ▼ (if GHOSTPROTO_API_KEY set — default path)
-┌─────────────────────────────────────────────────┐
-│       Proto Engine — Agentic Audit Loop         │
-│                                                 │
-│   ┌─────────────────────────────────────┐      │
-│   │  Agent reasons → picks a tool call  │◄─┐   │
-│   └─────────────────────────────────────┘  │   │
-│                 │                           │   │
-│                 ▼                           │   │
-│   ┌─────────────────────────────────────┐  │   │
-│   │  Sandboxed executor runs the tool   │  │   │
-│   │  (list_files / search_code /        │  │   │
-│   │   read_file / ...) — read-only      │  │   │
-│   └─────────────────────────────────────┘  │   │
-│                 │                           │   │
-│                 └───────── tool_result ─────┘   │
-│                                                 │
-│   Guardrails:  max-turns · max-budget ·         │
-│   repetition detector · path sandbox · trace    │
-│   │                                             │
-│   Terminates when Agent calls finalize_audit    │
-└─────────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────┐
-│         Report Generator        │
-│  • Terminal (colored)           │
-│  • audit-report.md              │
-│  • audit-report.html            │
-│  • audit-report.json            │
-│  • agent-trace.jsonl            │
-└─────────────────────────────────┘
+# Display active configuration profile and settings file path
+ghostch config show
 ```
 
-### Trace artifact
-Every agentic audit produces `.ghostproto/agent-trace.jsonl` with one event per line:
+### Trace Artifacts
+Every agentic run generates a chronological trace file under `.ghostproto/agent-trace.jsonl`:
 ```jsonl
-{"kind":"meta","model":"0.3","maxTurns":25,"maxBudgetTokens":500000,"summary":{...}}
-{"kind":"call","turn":1,"toolUseId":"call_...","name":"get_project_summary","input":{},"outputPreview":"...","outputBytes":342,"durationMs":2,"isError":false,"timestamp":"2026-04-23T..."}
-{"kind":"call","turn":2,"toolUseId":"call_...","name":"search_code","input":{"pattern":"eval("},...}
+{"kind":"meta","model":"0.3","maxTurns":25,"maxBudgetTokens":500000,"summary":{}}
+{"kind":"call","turn":1,"toolUseId":"call_abc123","name":"get_project_summary","input":{},"isError":false}
+{"kind":"call","turn":2,"toolUseId":"call_def456","name":"search_code","input":{"pattern":"eval("},"isError":false}
 ```
-Useful for debugging, cost analysis, and compliance/audit-trail requirements.
-
----
-
-## Supported Languages & Ecosystems
-
-TypeScript · JavaScript · Python · Go · Rust · Java · Kotlin · Swift ·  
-C/C++ · C# · PHP · Ruby · Scala · Elixir · Haskell · Lua · R ·  
-SQL · Shell · YAML · Terraform · Dockerfile · Vue · Svelte · Astro
 
 ---
 
 ## Options Reference
 
-```
+```text
 Usage: ghostch [options] [path]
 
 Arguments:
@@ -385,12 +260,13 @@ Options:
   -v, --version             Output version
   -k, --api-key <key>       Proto API key (or set GHOSTPROTO_API_KEY)
   -o, --output <formats>    Output formats: terminal,markdown,html,json (default: "terminal,markdown,html")
-  -c, --categories <cats>   Audit specific categories only
+  -c, --categories <cats>   Audit specific categories only (e.g. security,quality)
   -m, --model <model>       Proto model (default: "0.3")
   --max-files <n>           Max files to scan (default: 500)
   --max-file-size <kb>      Max file size in KB (default: 100)
   --static                  Static analysis only (no AI)
   --fast                    One-shot AI mode (no agentic loop)
+  -i, --interactive         Run interactive terminal dashboard
   --max-turns <n>           Agentic iteration cap (default: 25)
   --max-budget <tokens>     Agentic token ceiling (default: 500000)
   --no-trace                Don't write agent-trace.jsonl
@@ -403,27 +279,44 @@ Options:
 
 ---
 
-## Exit Codes
+## Supported Ecosystems
+GhostProto supports syntactical parsing and analysis across a wide range of languages:
 
-| Code | Meaning |
-|------|---------|
-| `0` | Audit passed — no critical issues |
-| `1` | Critical security issues found |
-| `2` | Audit failed (error) |
+- **Web:** TypeScript, JavaScript, Vue, Svelte, Astro, HTML, CSS.
+- **Backend & Systems:** Python, Go, Rust, Java, Kotlin, Swift, C/C++, C#, PHP, Ruby, Scala, Elixir, Haskell, Lua, R.
+- **Data & Configuration:** SQL, Shell scripts, YAML, Terraform, Dockerfile.
 
 ---
 
-## Contributing
+## Exit Codes
+
+The CLI emits standardized exit codes for CI/CD integrations:
+
+| Exit Code | Classification | Meaning |
+|:---:|:---|:---|
+| `0` | Success | Audit completed and passed; no critical issues found. |
+| `1` | Alert | Audit completed; one or more critical issues detected. |
+| `2` | Error | Audit execution failed due to errors or configurations. |
+
+---
+
+## Developer Commands
+
+Run developer scripts from the repository root:
 
 ```bash
-git clone https://github.com/AtlasRoX/Ghost-Proto.git
-cd Ghost-Proto
-npm install
-npm run dev -- ./some-project   # test against a project
-npm run build                   # compile TypeScript
-```
+# Start in development environment via ts-node
+npm run dev -- ./path/to/target
 
-Contributions welcome! Please open an issue first for major changes.
+# Perform type checking
+npm run typecheck
+
+# Run unit tests
+npm test
+
+# Run tests and generate code coverage report
+npm run test:coverage
+```
 
 ---
 

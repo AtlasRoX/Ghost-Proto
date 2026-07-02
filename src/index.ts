@@ -15,8 +15,9 @@ import { generateMarkdownReport } from './reporters/markdown';
 import { generateHtmlReport } from './reporters/html';
 import { generateJsonReport } from './reporters/json';
 import { AgentLogger } from './reporters/agent-log';
+import { InteractiveReporter } from './reporters/interactive';
 import type { AuditOptions } from './core/types';
-import { getApiKey, saveConfig, getConfigPath } from './core/config';
+import { getApiKey, saveConfig, getConfigPath, loadConfig } from './core/config';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version: VERSION } = require('../package.json');
@@ -44,6 +45,66 @@ async function main(): Promise<void> {
       }
     });
 
+  // Config subcommand structure
+  const configCmd = program
+    .command('config')
+    .description('Manage configuration settings (get, set, show)');
+
+  configCmd
+    .command('set <key> <value>')
+    .description('Set config key-value pair')
+    .action((key, value) => {
+      try {
+        const config = loadConfig();
+        (config as any)[key] = value;
+        saveConfig(config);
+        console.log(chalk.green(`Successfully set config ${key} = ${value}`));
+        process.exit(0);
+      } catch (err) {
+        console.error(chalk.red(`Error setting config: ${(err as Error).message}`));
+        process.exit(1);
+      }
+    });
+
+  configCmd
+    .command('get <key>')
+    .description('Get config value by key')
+    .action((key) => {
+      try {
+        const config = loadConfig();
+        const value = (config as any)[key];
+        if (value !== undefined) {
+          console.log(value);
+        } else {
+          console.log(chalk.yellow(`Config key "${key}" is not set.`));
+        }
+        process.exit(0);
+      } catch (err) {
+        console.error(chalk.red(`Error getting config: ${(err as Error).message}`));
+        process.exit(1);
+      }
+    });
+
+  configCmd
+    .command('show')
+    .description('Show entire configuration')
+    .action(() => {
+      try {
+        const config = loadConfig();
+        console.log(chalk.hex('#4ee6d3').bold('\n  Current Configuration:'));
+        console.log(chalk.gray(`  Path: ${getConfigPath()}\n`));
+        for (const [k, v] of Object.entries(config)) {
+          console.log(`  ${chalk.hex('#2dbfad')(k.padEnd(12))} : ${chalk.white(v)}`);
+        }
+        console.log();
+        process.exit(0);
+      } catch (err) {
+        console.error(chalk.red(`Error loading config: ${(err as Error).message}`));
+        process.exit(1);
+      }
+    });
+
+
   // Main audit options
   program
     .argument('[path]', 'Path to the project to audit', '.')
@@ -55,6 +116,7 @@ async function main(): Promise<void> {
     .option('--max-file-size <kb>', 'Maximum file size in KB to include', '100')
     .option('--static', 'Run static analysis only (no AI)')
     .option('--fast', 'Use one-shot AI mode (no agentic loop). Faster & cheaper but shallower.', false)
+    .option('-i, --interactive', 'Run interactive terminal dashboard', false)
     .option('--max-turns <n>', 'Max tool-use iterations for agentic mode', '25')
     .option('--max-budget <tokens>', 'Hard ceiling on total tokens (input+output) per agentic audit', '500000')
     .option('--no-trace', 'Do not write agent-trace.jsonl (trace is on by default in agentic mode)')
@@ -189,14 +251,10 @@ Examples:
         fs.mkdirSync(reportDir, { recursive: true });
       }
 
-      if (outputFormats.includes('terminal') && !opts['json']) {
-        printReport(report);
-      }
-
       if (outputFormats.includes('markdown')) {
         const mdPath = path.join(reportDir, 'audit-report.md');
         generateMarkdownReport(report, mdPath);
-        if (!opts['json'] && !options.quiet) {
+        if (!opts['json'] && !options.quiet && !opts['interactive']) {
           console.log(chalk.gray(`  📄 Markdown report → file:///${path.resolve(mdPath).replace(/\\/g, '/')}`));
         }
       }
@@ -204,7 +262,7 @@ Examples:
       if (outputFormats.includes('html')) {
         const htmlPath = path.join(reportDir, 'audit-report.html');
         generateHtmlReport(report, htmlPath);
-        if (!opts['json'] && !options.quiet) {
+        if (!opts['json'] && !options.quiet && !opts['interactive']) {
           console.log(chalk.gray(`  🌐 HTML report    → file:///${path.resolve(htmlPath).replace(/\\/g, '/')}`));
         }
       }
@@ -215,10 +273,20 @@ Examples:
         } else {
           const jsonPath = path.join(reportDir, 'audit-report.json');
           generateJsonReport(report, jsonPath);
-          if (!options.quiet) {
+          if (!options.quiet && !opts['interactive']) {
             console.log(chalk.gray(`  📦 JSON report    → file:///${path.resolve(jsonPath).replace(/\\/g, '/')}`));
           }
         }
+      }
+
+      if (opts['interactive']) {
+        const interactiveReporter = new InteractiveReporter(report);
+        interactiveReporter.start();
+        return;
+      }
+
+      if (outputFormats.includes('terminal') && !opts['json']) {
+        printReport(report);
       }
 
       // Exit code: 1 if critical issues found (useful for CI/CD)

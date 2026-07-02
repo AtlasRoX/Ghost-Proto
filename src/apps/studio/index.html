@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GhostProto Studio - Software Intelligence IDE</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Activity Bar -->
+  <nav id="activity-bar">
+    <button class="activity-btn active" title="Explorer" onclick="switchTab('explorer')">
+      <i class="fa-solid fa-folder-open"></i>
+    </button>
+    <button class="activity-btn" title="Call Graphs" onclick="switchTab('graphs')">
+      <i class="fa-solid fa-diagram-project"></i>
+    </button>
+    <button class="activity-btn" title="AI Playground" onclick="switchTab('ai')">
+      <i class="fa-solid fa-robot"></i>
+    </button>
+    <button class="activity-btn" title="Inference Monitor" onclick="switchTab('inference')">
+      <i class="fa-solid fa-microchip"></i>
+    </button>
+    <button class="activity-btn" title="Reports History" onclick="switchTab('reports')">
+      <i class="fa-solid fa-file-invoice"></i>
+    </button>
+  </nav>
+
+  <!-- Main Workspace -->
+  <main id="workspace">
+    <header>
+      <div class="title-area">
+        <span class="logo-badge">GHOST</span>
+        <h1>GhostProto Studio</h1>
+      </div>
+      <div class="controls-area">
+        <button class="preset-btn" onclick="toggleInvestigationMode()"><i class="fa-solid fa-shield-halved"></i> Toggle Investigation Mode</button>
+        <button class="preset-btn" onclick="runAnalysis()"><i class="fa-solid fa-play"></i> Run Security Audit</button>
+      </div>
+    </header>
+
+    <!-- Content Workspace Grid -->
+    <div class="view-container">
+      
+      <!-- Side Navigation / Explorer -->
+      <aside id="sidebar">
+        <div class="section-title">Files & Symbols</div>
+        <div class="tree-list">
+          <div class="tree-item active" onclick="loadFile('src/core/compiler/analysis/query/executor.ts')">
+            <i class="fa-solid fa-file-code" style="color: #61afef;"></i> executor.ts
+          </div>
+          <div class="tree-item" onclick="loadFile('src/core/compiler/analysis/query/planner.ts')">
+            <i class="fa-solid fa-file-code" style="color: #61afef;"></i> planner.ts
+          </div>
+          <div class="tree-item" onclick="loadFile('src/core/compiler/analysis/query/engine.ts')">
+            <i class="fa-solid fa-file-code" style="color: #61afef;"></i> engine.ts
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center Monaco Editor / Graph Area -->
+      <section id="main-panel">
+        
+        <!-- Editor Panel -->
+        <div id="editor-view" style="display: flex; flex-direction: column; height: 100%;">
+          <div class="editor-header">
+            <i class="fa-solid fa-file-code"></i> &nbsp; src/core/compiler/analysis/query/executor.ts
+          </div>
+          <div class="editor-content" id="code-container">
+            <!-- Will populate dynamically -->
+          </div>
+        </div>
+
+        <!-- Graph Panel (Hidden by default, shown when graph tab active) -->
+        <div id="graph-view" style="display: none; height: 100%; position: relative;">
+          <div class="editor-header">
+            <i class="fa-solid fa-diagram-project"></i> &nbsp; Interactive Control Flow Graph
+          </div>
+          <div id="graph-canvas">
+            <svg class="graph-svg">
+              <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#45a29e" />
+                </marker>
+              </defs>
+              <path class="graph-edge active" d="M 120 70 L 120 130" />
+              <path class="graph-edge active" d="M 120 180 L 120 240" />
+            </svg>
+            <div class="graph-node active" style="top: 30px; left: 50px;">Entry: query()</div>
+            <div class="graph-node" style="top: 130px; left: 50px;">validateParams()</div>
+            <div class="graph-node" style="top: 240px; left: 50px;">db.execute()</div>
+          </div>
+        </div>
+
+        <!-- Bottom Timeline / Logs -->
+        <div id="bottom-panel">
+          <div class="tabs-header">
+            <div class="tab-item active" onclick="switchBottomTab('logs')">Execution Logs</div>
+            <div class="tab-item" onclick="switchBottomTab('timeline')">Timeline Events</div>
+            <div class="tab-item" onclick="switchBottomTab('blackboard')">Blackboard</div>
+          </div>
+          <div class="tab-content" id="bottom-content">
+            [12:04:10] SCHEDULER_START: Starting execution of tasks...<br>
+            [12:04:11] TASK_ATTEMPT: Task run_audit attempt 1...<br>
+            [12:04:12] TASK_SUCCESS: Verified task completed successfully.<br>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Inspector Panel -->
+      <aside id="inspector">
+        <div class="panel-card">
+          <h3>Active Selection</h3>
+          <div class="metric-row">
+            <span>Symbol:</span>
+            <span class="metric-val" id="sel-symbol">db.execute()</span>
+          </div>
+          <div class="metric-row">
+            <span>Kind:</span>
+            <span class="metric-val">Method</span>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h3>Security Metrics</h3>
+          <div class="metric-row">
+            <span>Taint Route:</span>
+            <span class="metric-val" style="color: var(--danger);">Vulnerable</span>
+          </div>
+          <div class="metric-row">
+            <span>Confidence:</span>
+            <span class="metric-val">96%</span>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <h3>Consensus Votes</h3>
+          <div class="metric-row">
+            <span>SecurityWorker:</span>
+            <span class="metric-val" style="color: var(--success);"><i class="fa-solid fa-circle-check"></i> YES</span>
+          </div>
+          <div class="metric-row">
+            <span>Judge:</span>
+            <span class="metric-val" style="color: var(--success);"><i class="fa-solid fa-circle-check"></i> APPROVED</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Status Footer -->
+    <footer>
+      <div class="status-group">
+        <div class="status-item"><i class="fa-solid fa-code-branch"></i> branch: <span>main</span></div>
+        <div class="status-item"><i class="fa-solid fa-server"></i> provider: <span>NVIDIA NIM</span></div>
+      </div>
+      <div class="status-group">
+        <div class="status-item">tokens: <span>1,240</span></div>
+        <div class="status-item">latency: <span>340ms</span></div>
+        <div class="status-item">cost: <span>$0.0024</span></div>
+      </div>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

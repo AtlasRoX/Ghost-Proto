@@ -1,0 +1,11 @@
+{
+  "id": "performance",
+  "category": "Performance",
+  "description": "Audit project classes for complexity and circular dependencies",
+  "requiredCapabilities": ["json_mode"],
+  "rulePacks": ["COMPLEXITY"],
+  "retrievalStrategy": "fast",
+  "promptProfile": "performance-audit",
+  "consensusPolicy": "majority",
+  "maxCostLimit": 0.5
+}

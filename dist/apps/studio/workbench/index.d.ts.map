@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../../src/apps/studio/workbench/index.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,eAAe,EAAE,iBAAiB,EAAE,MAAM,YAAY,CAAC;AAE9E,qBAAa,SAAS;IACb,KAAK,eAAsB;IAC3B,QAAQ,kBAAyB;IACjC,UAAU,oBAA2B;IACrC,YAAY,EAAE,QAAQ,GAAG,eAAe,CAAY;IAE9C,SAAS,IAAI,OAAO,CAAC,IAAI,CAAC;IAmBhC,eAAe,IAAI,QAAQ,GAAG,eAAe;CAGrD"}
