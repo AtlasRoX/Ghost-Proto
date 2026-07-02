@@ -6,12 +6,7 @@
 
 *One command. Complete audit. Powered by Proto Engine.*
 
-<!-- Re-record: brew install charmbracelet/tap/vhs && vhs media/demo.tape -->
-<img src="media/demo.gif" alt="GhostProto demo" width="800" />
 
-
-[![npm version](https://img.shields.io/npm/v/ghostproto?color=06b6d4&style=flat-square)](https://www.npmjs.com/package/ghostproto)
-[![npm downloads](https://img.shields.io/npm/dm/ghostproto?color=4ade80&style=flat-square)](https://www.npmjs.com/package/ghostproto)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen?style=flat-square)](https://nodejs.org)
 [![Powered by Proto Engine](https://img.shields.io/badge/Powered%20by-Proto%20Engine-green?style=flat-square)](https://github.com/AtlasRoX/Ghost-Proto)
@@ -22,7 +17,7 @@
 
 ## What is GhostProto?
 
-**GhostProto** is a zero-config, AI-powered codebase auditor that runs like `npx ghostproto` (or `ghost` globally) and gives you the kind of comprehensive audit report that would cost thousands from a consulting firm.
+**GhostProto** is a zero-config, AI-powered codebase auditor that runs like `npx ghostproto` (or `ghostch` globally) and gives you the kind of comprehensive audit report that would cost thousands from a consulting firm.
 
 It combines **static analysis** (fast, no API key needed), **one-shot AI review**, and a true **agentic audit loop** where GhostProto actively investigates your codebase — reading files, searching for patterns, and verifying every finding with evidence — across 7 dimensions:
 
@@ -43,13 +38,13 @@ It combines **static analysis** (fast, no API key needed), **one-shot AI review*
 ### Installation & Execution
 
 #### 1. One-click Installer (Windows PowerShell)
-You can install and setup `ghost` globally with:
+You can install and setup `ghostch` globally with:
 ```powershell
 iwr -useb https://raw.githubusercontent.com/AtlasRoX/Ghost-Proto/main/install.ps1 | iex
 ```
-Then anywhere you just type `ghost` to open the tool:
+Then anywhere you just type `ghostch` to open the tool:
 ```bash
-ghost
+ghostch
 ```
 
 #### 2. Run with npx (Zero Install)
@@ -62,25 +57,25 @@ GHOSTPROTO_API_KEY=nvapi-... npx ghostproto
 
 ```bash
 # Static only — no API key required
-ghost --static
+ghostch --static
 
 # Specific project path
-ghost ./path/to/project
+ghostch ./path/to/project
 
 # Save API key globally in ~/.ghostproto.json
-ghost key nvapi-xxxxxx
+ghostch key nvapi-xxxxxx
 
 # One-shot AI mode — cheaper & faster, shallower than agentic
-ghost --fast
+ghostch --fast
 
 # Control the agent budget
-ghost --max-turns 40 --max-budget 1000000
+ghostch --max-turns 40 --max-budget 1000000
 
 # Output to HTML + Markdown reports
-ghost --output terminal,html,markdown
+ghostch --output terminal,html,markdown
 
 # CI/CD mode — JSON output, exits 1 on critical issues
-ghost --json
+ghostch --json
 ```
 
 ---
@@ -92,8 +87,8 @@ ghost --json
 npm install -g ghostproto
 
 # Then use anywhere
-ghost
-ghost ./my-project
+ghostch
+ghostch ./my-project
 ```
 
 ---
@@ -214,24 +209,24 @@ When an API key is available, GhostProto runs a **manual agentic loop**: the age
 ### 🔧 Highly Configurable
 ```bash
 # Static analysis only (no AI, no API key)
-ghost --static
+ghostch --static
 
 # One-shot AI mode (no agentic loop, cheaper)
-ghost --fast
+ghostch --fast
 
 # Specific categories only
-ghost --categories security,dependencies
+ghostch --categories security,dependencies
 
 # Control scope
-ghost --max-files 1000 --max-file-size 200
+ghostch --max-files 1000 --max-file-size 200
 
 # Tune the agent
-ghost --max-turns 40 --max-budget 1000000
-ghost --no-trace          # skip agent-trace.jsonl
+ghostch --max-turns 40 --max-budget 1000000
+ghostch --no-trace          # skip agent-trace.jsonl
 
 # Use fallback Proto models
-ghost --model 0.2
-ghost --model 0.1
+ghostch --model 0.2
+ghostch --model 0.1
 ```
 
 ---
@@ -381,7 +376,7 @@ SQL · Shell · YAML · Terraform · Dockerfile · Vue · Svelte · Astro
 ## Options Reference
 
 ```
-Usage: ghost [options] [path]
+Usage: ghostch [options] [path]
 
 Arguments:
   path                      Path to the project to audit (default: ".")

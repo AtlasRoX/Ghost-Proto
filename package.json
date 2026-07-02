@@ -25,7 +25,7 @@
     "url": "git+https://github.com/AtlasRoX/Ghost-Proto.git"
   },
   "bin": {
-    "ghost": "bin/ghostproto.js",
+    "ghostch": "bin/ghostproto.js",
     "ghostproto": "bin/ghostproto.js"
   },
   "main": "./dist/index.js",

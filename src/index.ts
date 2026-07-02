@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   const program = new Command();
 
   program
-    .name('ghost')
+    .name('ghostch')
     .description('AI-powered codebase auditor — security, quality, performance, architecture & more')
     .version(VERSION, '-v, --version');
 
@@ -64,21 +64,19 @@ async function main(): Promise<void> {
     .option('--json', 'Output JSON to stdout (for CI/CD)', false)
     .addHelpText('after', `
 Examples:
-  $ ghost                              # agentic audit (default when API key set)
-  $ ghost ./my-project
-  $ ghost key nvapi-xxxxxx             # save API key globally
-  $ ghost --verbose                    # show per-turn tokens + tool previews
-  $ ghost --fast                       # one-shot mode (cheaper, shallower)
-  $ ghost --max-turns 40 --max-budget 1000000
-  $ ghost --static --output markdown   # no AI, static only
-  $ ghost --json > audit.json
-  $ GHOSTPROTO_API_KEY=nvapi-... ghost
+  $ ghostch                              # agentic audit (default when API key set)
+  $ ghostch ./my-project
+  $ ghostch key nvapi-xxxxxx             # save API key globally
+  $ ghostch --verbose                    # show per-turn tokens + tool previews
+  $ ghostch --fast                       # one-shot mode (cheaper, shallower)
+  $ ghostch --max-turns 40 --max-budget 1000000
+  $ ghostch --static --output markdown   # no AI, static only
+  $ ghostch --json > audit.json
+  $ GHOSTPROTO_API_KEY=nvapi-... ghostch
     `);
 
   program.action(async (projectPathArg, opts) => {
     const projectPath = projectPathArg ?? '.';
-
-
 
     const outputFormats = ((opts['output'] as string) ?? 'terminal,markdown,html')
       .split(',')
@@ -189,21 +187,6 @@ Examples:
       const needsFileOutput = outputFormats.some(f => f !== 'terminal') && !opts['json'];
       if (needsFileOutput) {
         fs.mkdirSync(reportDir, { recursive: true });
-      }
-
-      // Persist agent trace when agentic mode ran and trace is enabled
-      if (report.agentTrace && options.trace) {
-        fs.mkdirSync(reportDir, { recursive: true });
-        const tracePath = path.join(reportDir, 'agent-trace.jsonl');
-        const lines: string[] = [];
-        lines.push(JSON.stringify({ kind: 'meta', model: report.agentTrace.model, maxTurns: report.agentTrace.maxTurns, maxBudgetTokens: report.agentTrace.maxBudgetTokens, summary: report.agentTrace.summary }));
-        for (const call of report.agentTrace.calls) {
-          lines.push(JSON.stringify({ kind: 'call', ...call }));
-        }
-        fs.writeFileSync(tracePath, lines.join('\n') + '\n', 'utf-8');
-        if (!opts['json'] && !options.quiet) {
-          console.log(chalk.gray(`  🧭 Agent trace    → ${path.relative(process.cwd(), tracePath)}`));
-        }
       }
 
       if (outputFormats.includes('terminal') && !opts['json']) {

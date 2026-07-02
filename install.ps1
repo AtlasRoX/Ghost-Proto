@@ -22,7 +22,7 @@ npm install -g $repoUrl
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "[+] GhostProto installed successfully!" -ForegroundColor Green
-    Write-Host "[+] You can now run the tool anywhere by typing: ghost" -ForegroundColor Green
+    Write-Host "[+] You can now run the tool anywhere by typing: ghostch" -ForegroundColor Green
 } else {
     Write-Host "[!] Installation failed. Try running PowerShell as Administrator." -ForegroundColor Red
 }

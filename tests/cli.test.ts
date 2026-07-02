@@ -38,7 +38,7 @@ describe('CLI', () => {
     it('--help shows usage, description, and all flags', () => {
       const { stdout, exitCode } = run(['--help']);
       expect(exitCode).toBe(0);
-      expect(stdout).toContain('ghost');
+      expect(stdout).toContain('ghostch');
       expect(stdout).toContain('AI-powered codebase auditor');
       expect(stdout).toContain('--static');
       expect(stdout).toContain('--api-key');
