@@ -271,6 +271,9 @@ describe('runAgentLoop', () => {
   it('captures API errors as stopReason=error without crashing', async () => {
     const { ctx, tmpDir } = makeCtx();
 
+    // Script errors for all fallback models (0.3, 0.2, 0.1)
+    scriptError(new Error('429 rate_limit_error'));
+    scriptError(new Error('429 rate_limit_error'));
     scriptError(new Error('429 rate_limit_error'));
 
     const progressMsgs: string[] = [];

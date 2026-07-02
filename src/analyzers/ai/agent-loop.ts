@@ -222,6 +222,7 @@ export async function runAgentLoop(
 
   let stopReason: AgentTraceSummary['stopReason'] = 'error';
   let stopDetail: string | undefined;
+  let actualModelUsed = opts.model;
   const start = Date.now();
 
   const messages: OpenAiMessage[] = [
@@ -241,41 +242,62 @@ export async function runAgentLoop(
       hooks.onTurnStart?.({ turn, maxTurns: opts.maxTurns });
       hooks.onProgress?.(`GhostProto is reasoning (turn ${turn}/${opts.maxTurns}, ${inputTokens + outputTokens} tokens used)...`);
 
-      const resolvedModel = opts.model === '0.3' ? 'nvidia/nemotron-3-ultra-550b-a55b'
-                          : opts.model === '0.2' ? 'nvidia/nemotron-3-super-120b-a12b'
-                          : opts.model === '0.1' ? 'nvidia/llama-3.3-nemotron-super-49b-v1'
-                          : opts.model;
+      const modelsToTry: string[] = [];
+      if (opts.model === '0.3') {
+        modelsToTry.push('nvidia/nemotron-3-ultra-550b-a55b', 'nvidia/nemotron-3-super-120b-a12b', 'nvidia/llama-3.3-nemotron-super-49b-v1');
+      } else if (opts.model === '0.2') {
+        modelsToTry.push('nvidia/nemotron-3-super-120b-a12b', 'nvidia/llama-3.3-nemotron-super-49b-v1');
+      } else if (opts.model === '0.1') {
+        modelsToTry.push('nvidia/llama-3.3-nemotron-super-49b-v1');
+      } else {
+        modelsToTry.push(opts.model, 'nvidia/nemotron-3-ultra-550b-a55b', 'nvidia/nemotron-3-super-120b-a12b', 'nvidia/llama-3.3-nemotron-super-49b-v1');
+      }
 
-      let chatCompletion: ChatCompletionResponse;
-      try {
-        const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${opts.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: resolvedModel,
-            messages: [
-              { role: 'system', content: SYSTEM_PROMPT },
-              ...messages,
-            ],
-            tools: openAiTools,
-            tool_choice: 'auto',
-            temperature: 0.2,
-            max_tokens: 4096,
-          }),
-        });
+      let chatCompletion: ChatCompletionResponse | undefined;
+      let lastError: Error | undefined;
 
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`HTTP status ${res.status}: ${errText}`);
+      for (const currentModel of modelsToTry) {
+        try {
+          const modelLabel = currentModel.split('/').pop() || currentModel;
+          hooks.onProgress?.(`GhostProto is reasoning (turn ${turn}/${opts.maxTurns}, model: ${modelLabel})...`);
+          const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${opts.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: currentModel,
+              messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                ...messages,
+              ],
+              tools: openAiTools,
+              tool_choice: 'auto',
+              temperature: 0.2,
+              max_tokens: 4096,
+            }),
+          });
+
+          if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(`HTTP status ${res.status}: ${errText}`);
+          }
+
+          chatCompletion = (await res.json()) as ChatCompletionResponse;
+          actualModelUsed = currentModel;
+          lastError = undefined;
+          break; // Success!
+        } catch (e) {
+          lastError = e instanceof Error ? e : new Error(String(e));
+          const modelLabel = currentModel.split('/').pop() || currentModel;
+          hooks.onProgress?.(`⚠ Model ${modelLabel} failed: ${lastError.message}. Trying next fallback...`);
         }
+      }
 
-        chatCompletion = (await res.json()) as ChatCompletionResponse;
-      } catch (e) {
+      if (!chatCompletion || lastError) {
         stopReason = 'error';
-        stopDetail = e instanceof Error ? e.message : String(e);
+        stopDetail = lastError?.message ?? 'All models failed';
         hooks.onProgress?.(`⚠ GhostProto API error on turn ${turn}: ${stopDetail}`);
         break;
       }
@@ -511,7 +533,7 @@ export async function runAgentLoop(
 
   const agentTrace: AgentTrace = {
     enabled: true,
-    model: opts.model,
+    model: actualModelUsed,
     maxTurns: opts.maxTurns,
     maxBudgetTokens: opts.maxBudgetTokens,
     summary,

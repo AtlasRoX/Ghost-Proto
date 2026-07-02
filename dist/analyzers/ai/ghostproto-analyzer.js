@@ -114,37 +114,54 @@ Return at most 5 findings per category. Prioritize critical and high severity is
 async function analyzeWithGhostProto(files, info, apiKey, model, filterCategories) {
     const codeContext = buildCodeContext(files, MAX_CONTEXT_CHARS);
     const prompt = buildAuditPrompt(info, codeContext, filterCategories);
-    const resolvedModel = model === '0.3' ? 'nvidia/nemotron-3-ultra-550b-a55b'
-        : model === '0.2' ? 'nvidia/nemotron-3-super-120b-a12b'
-            : model === '0.1' ? 'nvidia/llama-3.3-nemotron-super-49b-v1'
-                : model;
-    let response;
-    try {
-        const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: resolvedModel,
-                messages: [
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'user', content: prompt },
-                ],
-                temperature: 0.2,
-                max_tokens: 4096,
-            }),
-        });
-        if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`HTTP status ${res.status}: ${errText}`);
-        }
-        const data = (await res.json());
-        response = data.choices?.[0]?.message?.content ?? '';
+    const modelsToTry = [];
+    if (model === '0.3') {
+        modelsToTry.push('nvidia/nemotron-3-ultra-550b-a55b', 'nvidia/nemotron-3-super-120b-a12b', 'nvidia/llama-3.3-nemotron-super-49b-v1');
     }
-    catch (err) {
-        throw new Error(`Proto Engine API error: ${err instanceof Error ? err.message : String(err)}`);
+    else if (model === '0.2') {
+        modelsToTry.push('nvidia/nemotron-3-super-120b-a12b', 'nvidia/llama-3.3-nemotron-super-49b-v1');
+    }
+    else if (model === '0.1') {
+        modelsToTry.push('nvidia/llama-3.3-nemotron-super-49b-v1');
+    }
+    else {
+        modelsToTry.push(model, 'nvidia/nemotron-3-ultra-550b-a55b', 'nvidia/nemotron-3-super-120b-a12b', 'nvidia/llama-3.3-nemotron-super-49b-v1');
+    }
+    let response;
+    let lastError;
+    for (const currentModel of modelsToTry) {
+        try {
+            const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: currentModel,
+                    messages: [
+                        { role: 'system', content: SYSTEM_PROMPT },
+                        { role: 'user', content: prompt },
+                    ],
+                    temperature: 0.2,
+                    max_tokens: 4096,
+                }),
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`HTTP status ${res.status}: ${errText}`);
+            }
+            const data = (await res.json());
+            response = data.choices?.[0]?.message?.content ?? '';
+            lastError = undefined;
+            break; // Success!
+        }
+        catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err));
+        }
+    }
+    if (response === undefined || lastError) {
+        throw new Error(`Proto Engine API error: ${lastError?.message ?? 'All models failed'}`);
     }
     // Parse JSON
     let parsed;
