@@ -44,8 +44,7 @@
     "pretest": "npm run build",
     "test": "jest",
     "test:coverage": "npm run build && jest --coverage",
-    "prepublishOnly": "npm test",
-    "prepare": "npm run build"
+    "prepublishOnly": "npm test"
   },
   "engines": {
     "node": ">=18.0.0"
