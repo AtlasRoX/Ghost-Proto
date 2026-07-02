@@ -1,0 +1,272 @@
+// ─────────────────────────────────────────────
+//  ghostproto — GhostProto AI Analyzer
+// ─────────────────────────────────────────────
+
+import { scoreToGrade } from '../../core/types';
+import type { ScannedFile, ProjectInfo, Finding, CategoryScore, AuditCategory, AgentTrace } from '../../core/types';
+import { runAgentLoop, buildInitialUserPrompt, type AgentLoopHooks } from './agent-loop';
+import type { ToolContext } from './tools';
+
+const MAX_CONTEXT_CHARS = 60_000;
+const PRIORITY_EXTENSIONS = ['ts', 'js', 'py', 'go', 'rs', 'java', 'rb'];
+
+function buildCodeContext(files: ScannedFile[], maxChars: number): string {
+  // Prioritize entry points, main files, and important dirs
+  const prioritized = [...files].sort((a, b) => {
+    const aScore = getPriorityScore(a.relativePath);
+    const bScore = getPriorityScore(b.relativePath);
+    return bScore - aScore;
+  });
+
+  const chunks: string[] = [];
+  let totalChars = 0;
+
+  for (const file of prioritized) {
+    if (totalChars >= maxChars) break;
+    const ext = file.relativePath.split('.').pop()?.toLowerCase() ?? '';
+    if (!PRIORITY_EXTENSIONS.includes(ext)) continue;
+
+    const header = `\n\n// ═══ FILE: ${file.relativePath} (${file.lines} lines) ═══\n`;
+    // Truncate very large files
+    const content = file.content.length > 3000
+      ? file.content.slice(0, 3000) + '\n// ... [truncated]'
+      : file.content;
+
+    const chunk = header + content;
+    if (totalChars + chunk.length > maxChars) break;
+
+    chunks.push(chunk);
+    totalChars += chunk.length;
+  }
+
+  return chunks.join('');
+}
+
+function getPriorityScore(filePath: string): number {
+  const f = filePath.toLowerCase();
+  let score = 0;
+  if (f.includes('index.') || f.includes('main.') || f.includes('app.')) score += 10;
+  if (f.includes('auth') || f.includes('security') || f.includes('crypto')) score += 8;
+  if (f.includes('api') || f.includes('route') || f.includes('controller')) score += 6;
+  if (f.includes('config') || f.includes('setting') || f.includes('env')) score += 5;
+  if (f.includes('service') || f.includes('util') || f.includes('helper')) score += 4;
+  if (f.includes('model') || f.includes('schema') || f.includes('database')) score += 4;
+  if (f.includes('middleware') || f.includes('hook') || f.includes('plugin')) score += 3;
+  if (f.includes('.test.') || f.includes('.spec.')) score -= 3;
+  if (f.includes('node_modules') || f.includes('vendor')) score -= 20;
+  return score;
+}
+
+interface AIAuditResponse {
+  security: { score: number; summary: string; findings: Finding[] };
+  quality: { score: number; summary: string; findings: Finding[] };
+  performance: { score: number; summary: string; findings: Finding[] };
+  architecture: { score: number; summary: string; findings: Finding[] };
+  testing: { score: number; summary: string; findings: Finding[] };
+  documentation: { score: number; summary: string; findings: Finding[] };
+}
+
+const SYSTEM_PROMPT = `You are GhostProto — an expert senior software engineer conducting a comprehensive codebase audit. 
+Your job is to identify real, actionable issues across 6 dimensions with the precision of a principal engineer at a top-tier tech company.
+
+Be specific, accurate, and brutal-but-constructive. Prioritize findings that actually matter.
+Return ONLY valid JSON — no prose, no markdown, no code fences.`;
+
+function buildAuditPrompt(info: ProjectInfo, codeContext: string, filterCategories?: AuditCategory[]): string {
+  const depsStr = Object.entries(info.dependencies).slice(0, 30)
+    .map(([k, v]) => `${k}@${v}`).join(', ');
+
+  const allCategories: AuditCategory[] = ['security', 'quality', 'performance', 'architecture', 'testing', 'documentation'];
+  const cats = filterCategories ?? allCategories;
+
+  const jsonShape = cats.map(cat => `  "${cat}": {
+    "score": <0-100>,
+    "summary": "<2-3 sentence executive summary>",
+    "findings": [<Finding objects>]
+  }`).join(',\n');
+
+  return `Audit this codebase and return a JSON object with exactly this structure:
+
+{
+${jsonShape}
+}
+
+Each Finding object must have:
+{
+  "id": "CAT-NNN",
+  "category": "<security|quality|performance|architecture|testing|documentation>",
+  "severity": "<critical|high|medium|low|info>",
+  "title": "<concise title>",
+  "description": "<specific description with why it matters>",
+  "file": "<relative path if applicable>",
+  "line": <line number if applicable>,
+  "snippet": "<relevant code snippet if applicable, max 100 chars>",
+  "fix": "<specific, actionable fix with code example if possible>"
+}
+
+PROJECT INFO:
+- Name: ${info.name}
+- Languages: ${Object.entries(info.languages).map(([l, c]) => `${l} (${c} files)`).join(', ')}
+- Frameworks: ${info.frameworks.join(', ') || 'None detected'}
+- Total Files: ${info.totalFiles}
+- Total Lines: ${info.totalLines}
+- Has Tests: ${info.hasTests}
+- Test Frameworks: ${info.testFrameworks.join(', ') || 'None'}
+- Package Manager: ${info.packageManager ?? 'Unknown'}
+- Dependencies: ${depsStr || 'None'}
+
+CODEBASE:
+${codeContext}
+
+Focus on REAL issues you can see in the code. Do not hallucinate findings. If the code is clean, say so and give a high score.
+Return at most 5 findings per category. Prioritize critical and high severity issues.`;
+}
+
+interface ChatCompletionResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+}
+
+export async function analyzeWithGhostProto(
+  files: ScannedFile[],
+  info: ProjectInfo,
+  apiKey: string,
+  model: string,
+  filterCategories?: AuditCategory[],
+): Promise<CategoryScore[]> {
+  const codeContext = buildCodeContext(files, MAX_CONTEXT_CHARS);
+  const prompt = buildAuditPrompt(info, codeContext, filterCategories);
+
+  const resolvedModel = model === '0.3' ? 'nvidia/nemotron-3-ultra-550b-a55b'
+                      : model === '0.2' ? 'nvidia/nemotron-3-super-120b-a12b'
+                      : model === '0.1' ? 'nvidia/llama-3.3-nemotron-super-49b-v1'
+                      : model;
+
+  let response: string;
+  try {
+    const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: resolvedModel,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 4096,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`HTTP status ${res.status}: ${errText}`);
+    }
+
+    const data = (await res.json()) as ChatCompletionResponse;
+    response = data.choices?.[0]?.message?.content ?? '';
+  } catch (err: unknown) {
+    throw new Error(`Proto Engine API error: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // Parse JSON
+  let parsed: AIAuditResponse;
+  try {
+    // Strip potential markdown fences
+    const cleaned = response.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+    parsed = JSON.parse(cleaned);
+  } catch {
+    throw new Error(`Failed to parse GhostProto response as JSON. Raw: ${response.slice(0, 200)}`);
+  }
+
+  const allCategoryOrder: AuditCategory[] = ['security', 'quality', 'performance', 'architecture', 'testing', 'documentation'];
+  const categoryOrder = filterCategories ?? allCategoryOrder;
+
+  return categoryOrder.map(cat => {
+    const data = parsed[cat as keyof AIAuditResponse];
+    if (!data) {
+      return {
+        category: cat,
+        score: 50,
+        grade: 'C' as const,
+        findings: [],
+        summary: 'Analysis unavailable.',
+      };
+    }
+
+    const score = Math.max(0, Math.min(100, Math.round(data.score)));
+    return {
+      category: cat,
+      score,
+      grade: scoreToGrade(score),
+      findings: (data.findings ?? []).map((f: Partial<Finding>, i: number) => ({
+        id: f.id ?? `${cat.toUpperCase().slice(0, 3)}-GP-${i + 1}`,
+        category: cat,
+        severity: f.severity ?? 'medium',
+        title: f.title ?? 'Untitled finding',
+        description: f.description ?? '',
+        file: f.file,
+        line: f.line,
+        snippet: f.snippet,
+        fix: f.fix,
+      })),
+      summary: data.summary ?? '',
+    };
+  });
+}
+
+// ─────────────────────────────────────────────
+//  Agentic analyzer — GhostProto drives its own investigation via tools
+// ─────────────────────────────────────────────
+
+export interface AgenticAnalysisOptions {
+  projectRoot: string;
+  info: ProjectInfo;
+  staticFindings: Finding[];
+  apiKey: string;
+  model: string;
+  maxTurns: number;
+  maxBudgetTokens: number;
+  filterCategories?: AuditCategory[];
+  files: ScannedFile[];
+  hooks?: AgentLoopHooks;
+}
+
+export interface AgenticAnalysisResult {
+  categories: CategoryScore[];
+  trace: AgentTrace;
+}
+
+export async function analyzeWithGhostProtoAgent(
+  opts: AgenticAnalysisOptions,
+): Promise<AgenticAnalysisResult> {
+  const ctx: ToolContext = {
+    projectRoot: opts.projectRoot,
+    projectInfo: opts.info,
+    staticFindings: opts.staticFindings,
+    onFinalize: () => { /* replaced by runAgentLoop */ },
+  };
+
+  const prompt = buildInitialUserPrompt(opts.info, opts.files, opts.filterCategories);
+
+  const result = await runAgentLoop(
+    ctx,
+    {
+      apiKey: opts.apiKey,
+      model: opts.model,
+      maxTurns: opts.maxTurns,
+      maxBudgetTokens: opts.maxBudgetTokens,
+      filterCategories: opts.filterCategories,
+    },
+    opts.hooks ?? {},
+    prompt,
+  );
+
+  return result;
+}
