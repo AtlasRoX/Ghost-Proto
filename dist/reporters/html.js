@@ -98,7 +98,7 @@ function generateHtmlReport(report, outputPath) {
   :root {
     --bg: #0f1117; --surface: #1a1d27; --surface2: #21263a;
     --border: #2d3348; --text: #e2e8f0; --muted: #6b7280;
-    --cyan: #06b6d4; --green: #4ade80; --yellow: #facc15; --red: #f87171;
+    --cyan: #2dbfad; --green: #4ade80; --yellow: #facc15; --red: #f87171;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; }

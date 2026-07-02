@@ -8,7 +8,7 @@
 // A spinner only shows during the genuinely-blocking API-wait phase of each
 // turn, then clears as soon as GhostProto emits tool uses.
 //
-// Designed to match the warm amber terminal theme used elsewhere in the CLI.
+// Designed to match the teal terminal theme used elsewhere in the CLI.
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -17,28 +17,28 @@ exports.AgentLogger = void 0;
 const chalk_1 = __importDefault(require("chalk"));
 const ora_1 = __importDefault(require("ora"));
 // ── Theme (mirrors terminal.ts) ──────────────────
-const AMBER = {
-    primary: '#D97757',
-    bright: '#E8A87C',
-    deep: '#B85C38',
-    glow: '#F4A261',
-    cream: '#F4E5D3',
-    tan: '#A67B5B',
+const TEAL = {
+    primary: '#2dbfad',
+    bright: '#4ee6d3',
+    deep: '#1d8a7c',
+    glow: '#64dfdf',
+    cream: '#e6f7f5',
+    tan: '#5ba399',
     ember: '#C44536',
 };
 const c = {
-    primary: chalk_1.default.hex(AMBER.bright).bold,
-    accent: chalk_1.default.hex(AMBER.primary),
-    accentBold: chalk_1.default.hex(AMBER.primary).bold,
-    body: chalk_1.default.hex(AMBER.cream),
-    muted: chalk_1.default.hex(AMBER.tan),
-    tan: chalk_1.default.hex(AMBER.tan),
-    deep: chalk_1.default.hex(AMBER.deep),
-    glow: chalk_1.default.hex(AMBER.glow),
-    ember: chalk_1.default.hex(AMBER.ember),
-    success: chalk_1.default.hex(AMBER.bright).bold,
-    error: chalk_1.default.hex(AMBER.ember).bold,
-    warn: chalk_1.default.hex(AMBER.deep).bold,
+    primary: chalk_1.default.hex(TEAL.bright).bold,
+    accent: chalk_1.default.hex(TEAL.primary),
+    accentBold: chalk_1.default.hex(TEAL.primary).bold,
+    body: chalk_1.default.hex(TEAL.cream),
+    muted: chalk_1.default.hex(TEAL.tan),
+    tan: chalk_1.default.hex(TEAL.tan),
+    deep: chalk_1.default.hex(TEAL.deep),
+    glow: chalk_1.default.hex(TEAL.glow),
+    ember: chalk_1.default.hex(TEAL.ember),
+    success: chalk_1.default.hex(TEAL.bright).bold,
+    error: chalk_1.default.hex(TEAL.ember).bold,
+    warn: chalk_1.default.hex(TEAL.deep).bold,
 };
 // ── Formatting helpers ───────────────────────────
 function formatBytes(n) {

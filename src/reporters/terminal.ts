@@ -10,35 +10,34 @@ import type { AuditReport, Finding, CategoryScore, Severity, AuditCategory } fro
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version: VERSION } = require('../../package.json');
 
-// ── Warm Amber Theme (Anthropic-inspired) ────────────────
-// Brand palette built around Anthropic's signature coral/amber tones.
-const AMBER = {
-  primary:  '#D97757', // Anthropic coral — primary accent
-  bright:   '#E8A87C', // Light amber — highlights
-  deep:     '#B85C38', // Burnt amber — emphasis
-  glow:     '#F4A261', // Warm glow — success-ish accents
-  cream:    '#F4E5D3', // Cream — subtle text
-  tan:      '#A67B5B', // Muted tan — dimmed text
-  ember:    '#C44536', // Deep ember — critical warmth
+// ── Teal Theme (#2dbfad) ────────────────
+const TEAL = {
+  primary:  '#2dbfad', // Proto Teal — primary accent
+  bright:   '#4ee6d3', // Light teal — highlights
+  deep:     '#1d8a7c', // Darker teal — emphasis
+  glow:     '#64dfdf', // Vibrant cyan/teal — success-ish accents
+  cream:    '#e6f7f5', // Soft teal-tinted white — subtle text
+  tan:      '#5ba399', // Muted greyish teal — dimmed text
+  ember:    '#C44536', // Keep red/ember for critical warmth
 };
 
 const theme = {
-  // Primary — golden amber, used for headings and key labels
-  primary:   chalk.hex(AMBER.bright).bold,
-  // Accent — coral, used for values / interactive numbers
-  accent:    chalk.hex(AMBER.primary),
-  accentBold:chalk.hex(AMBER.primary).bold,
+  // Primary — golden teal, used for headings and key labels
+  primary:   chalk.hex(TEAL.bright).bold,
+  // Accent — teal, used for values / interactive numbers
+  accent:    chalk.hex(TEAL.primary),
+  accentBold:chalk.hex(TEAL.primary).bold,
   // Body & muted
-  body:      chalk.hex(AMBER.cream),
-  muted:     chalk.hex(AMBER.tan),
-  // Legacy aliases (kept to minimise diff surface)
-  bright:    chalk.hex(AMBER.bright),
-  deep:      chalk.hex(AMBER.deep),
-  glow:      chalk.hex(AMBER.glow),
-  cream:     chalk.hex(AMBER.cream),
-  tan:       chalk.hex(AMBER.tan),
-  ember:     chalk.hex(AMBER.ember),
-  dim:       chalk.hex(AMBER.tan),
+  body:      chalk.hex(TEAL.cream),
+  muted:     chalk.hex(TEAL.tan),
+  // Legacy aliases
+  bright:    chalk.hex(TEAL.bright),
+  deep:      chalk.hex(TEAL.deep),
+  glow:      chalk.hex(TEAL.glow),
+  cream:     chalk.hex(TEAL.cream),
+  tan:       chalk.hex(TEAL.tan),
+  ember:     chalk.hex(TEAL.ember),
+  dim:       chalk.hex(TEAL.tan),
 };
 
 /** Render a section heading with an accent bar + tan underline. */
@@ -60,31 +59,31 @@ const CATEGORY_ICONS: Record<AuditCategory, string> = {
 };
 
 const SEVERITY_COLOR: Record<Severity, chalk.Chalk> = {
-  critical: chalk.bgHex(AMBER.ember).hex('#FFF5EC').bold,
-  high:     chalk.hex(AMBER.ember).bold,
-  medium:   chalk.hex(AMBER.deep).bold,
-  low:      chalk.hex(AMBER.glow),
-  info:     chalk.hex(AMBER.tan),
+  critical: chalk.bgHex(TEAL.ember).hex('#FFF5EC').bold,
+  high:     chalk.hex(TEAL.ember).bold,
+  medium:   chalk.hex(TEAL.deep).bold,
+  low:      chalk.hex(TEAL.glow),
+  info:     chalk.hex(TEAL.tan),
 };
 
-// A → F goes monotonically from lightest amber to darkest ember so the
+// A → F goes monotonically from lightest teal to darkest ember so the
 // grade colour alone communicates severity at a glance.
 const GRADE_COLOR: Record<string, chalk.Chalk> = {
-  A: chalk.hex(AMBER.bright).bold,
-  B: chalk.hex(AMBER.glow).bold,
-  C: chalk.hex(AMBER.primary).bold,
-  D: chalk.hex(AMBER.deep).bold,
-  F: chalk.bgHex(AMBER.ember).hex('#FFF5EC').bold,
+  A: chalk.hex(TEAL.bright).bold,
+  B: chalk.hex(TEAL.glow).bold,
+  C: chalk.hex(TEAL.primary).bold,
+  D: chalk.hex(TEAL.deep).bold,
+  F: chalk.bgHex(TEAL.ember).hex('#FFF5EC').bold,
 };
 
 function scoreBar(score: number, width = 20): string {
   const filled = Math.round((score / 100) * width);
   const empty = width - filled;
   const color =
-    score >= 80 ? chalk.hex(AMBER.bright)
-    : score >= 60 ? chalk.hex(AMBER.primary)
-    : chalk.hex(AMBER.ember);
-  return color('█'.repeat(filled)) + chalk.hex(AMBER.tan)('░'.repeat(empty));
+    score >= 80 ? chalk.hex(TEAL.bright)
+    : score >= 60 ? chalk.hex(TEAL.primary)
+    : chalk.hex(TEAL.ember);
+  return color('█'.repeat(filled)) + chalk.hex(TEAL.tan)('░'.repeat(empty));
 }
 
 function formatDuration(ms: number): string {
@@ -113,7 +112,7 @@ export function printBanner(): void {
     boxen(banner, {
       padding: 1,
       borderStyle: 'double',
-      borderColor: AMBER.primary,
+      borderColor: TEAL.primary,
     }),
   );
   console.log();
@@ -154,9 +153,9 @@ export function printReport(report: AuditReport): void {
   ].filter(l => l !== '').join('\n');
 
   const headerBorder =
-    overallScore >= 80 ? AMBER.bright
-    : overallScore >= 60 ? AMBER.primary
-    : AMBER.ember;
+    overallScore >= 80 ? TEAL.bright
+    : overallScore >= 60 ? TEAL.primary
+    : TEAL.ember;
 
   console.log(boxen(headerContent, {
     padding: { top: 0, bottom: 0, left: 1, right: 2 },

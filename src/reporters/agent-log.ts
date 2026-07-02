@@ -7,7 +7,7 @@
 // A spinner only shows during the genuinely-blocking API-wait phase of each
 // turn, then clears as soon as GhostProto emits tool uses.
 //
-// Designed to match the warm amber terminal theme used elsewhere in the CLI.
+// Designed to match the teal terminal theme used elsewhere in the CLI.
 
 import chalk from 'chalk';
 import ora, { type Ora } from 'ora';
@@ -22,29 +22,29 @@ import type {
 } from '../analyzers/ai/agent-loop';
 
 // ── Theme (mirrors terminal.ts) ──────────────────
-const AMBER = {
-  primary: '#D97757',
-  bright:  '#E8A87C',
-  deep:    '#B85C38',
-  glow:    '#F4A261',
-  cream:   '#F4E5D3',
-  tan:     '#A67B5B',
+const TEAL = {
+  primary: '#2dbfad',
+  bright:  '#4ee6d3',
+  deep:    '#1d8a7c',
+  glow:    '#64dfdf',
+  cream:   '#e6f7f5',
+  tan:     '#5ba399',
   ember:   '#C44536',
 };
 
 const c = {
-  primary:    chalk.hex(AMBER.bright).bold,
-  accent:     chalk.hex(AMBER.primary),
-  accentBold: chalk.hex(AMBER.primary).bold,
-  body:       chalk.hex(AMBER.cream),
-  muted:      chalk.hex(AMBER.tan),
-  tan:        chalk.hex(AMBER.tan),
-  deep:       chalk.hex(AMBER.deep),
-  glow:       chalk.hex(AMBER.glow),
-  ember:      chalk.hex(AMBER.ember),
-  success:    chalk.hex(AMBER.bright).bold,
-  error:      chalk.hex(AMBER.ember).bold,
-  warn:       chalk.hex(AMBER.deep).bold,
+  primary:    chalk.hex(TEAL.bright).bold,
+  accent:     chalk.hex(TEAL.primary),
+  accentBold: chalk.hex(TEAL.primary).bold,
+  body:       chalk.hex(TEAL.cream),
+  muted:      chalk.hex(TEAL.tan),
+  tan:        chalk.hex(TEAL.tan),
+  deep:       chalk.hex(TEAL.deep),
+  glow:       chalk.hex(TEAL.glow),
+  ember:      chalk.hex(TEAL.ember),
+  success:    chalk.hex(TEAL.bright).bold,
+  error:      chalk.hex(TEAL.ember).bold,
+  warn:       chalk.hex(TEAL.deep).bold,
 };
 
 // ── Options ──────────────────────────────────────

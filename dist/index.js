@@ -138,7 +138,7 @@ Examples:
                 spinnerHandedOff = true;
                 return;
             }
-            spinner.text = chalk_1.default.hex('#E8A87C')(msg);
+            spinner.text = chalk_1.default.hex('#2dbfad')(msg);
         };
         let exitCode = 0;
         try {
@@ -158,7 +158,7 @@ Examples:
             });
             if (liveMode) {
                 if (!spinnerHandedOff) {
-                    spinner.succeed(chalk_1.default.hex('#E8A87C')(`Audit complete in ${report.durationMs < 1000 ? report.durationMs + 'ms' : (report.durationMs / 1000).toFixed(1) + 's'}`));
+                    spinner.succeed(chalk_1.default.hex('#2dbfad')(`Audit complete in ${report.durationMs < 1000 ? report.durationMs + 'ms' : (report.durationMs / 1000).toFixed(1) + 's'}`));
                 }
                 else {
                     // Logger already printed its own finish rule; just a blank line to breathe.
@@ -178,14 +178,14 @@ Examples:
                 const mdPath = path_1.default.join(reportDir, 'audit-report.md');
                 (0, markdown_1.generateMarkdownReport)(report, mdPath);
                 if (!opts['json'] && !options.quiet) {
-                    console.log(chalk_1.default.gray(`  📄 Markdown report → ${path_1.default.relative(process.cwd(), mdPath)}`));
+                    console.log(chalk_1.default.gray(`  📄 Markdown report → file:///${path_1.default.resolve(mdPath).replace(/\\/g, '/')}`));
                 }
             }
             if (outputFormats.includes('html')) {
                 const htmlPath = path_1.default.join(reportDir, 'audit-report.html');
                 (0, html_1.generateHtmlReport)(report, htmlPath);
                 if (!opts['json'] && !options.quiet) {
-                    console.log(chalk_1.default.gray(`  🌐 HTML report    → ${path_1.default.relative(process.cwd(), htmlPath)}`));
+                    console.log(chalk_1.default.gray(`  🌐 HTML report    → file:///${path_1.default.resolve(htmlPath).replace(/\\/g, '/')}`));
                 }
             }
             if (outputFormats.includes('json') || opts['json']) {
@@ -196,7 +196,7 @@ Examples:
                     const jsonPath = path_1.default.join(reportDir, 'audit-report.json');
                     (0, json_1.generateJsonReport)(report, jsonPath);
                     if (!options.quiet) {
-                        console.log(chalk_1.default.gray(`  📦 JSON report    → ${path_1.default.relative(process.cwd(), jsonPath)}`));
+                        console.log(chalk_1.default.gray(`  📦 JSON report    → file:///${path_1.default.resolve(jsonPath).replace(/\\/g, '/')}`));
                     }
                 }
             }
